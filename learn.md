@@ -1,155 +1,155 @@
-# CAIPO — دليل المشروع
+# CAIPO — project guide
 
-التطبيق ده رفيق الموبايل لجهاز CAIPO القابل للارتداء. هو مش الجهاز نفسه، ومش سيرفر الذكاء. دوره إنه يوصل الموبايل بالجهاز عبر البلوتوث، ويوصل كلام المستخدم بـ FloBrain، ويرجع الرد صوتًا على السماعة، ويحفظ المحادثة والملفات على الموبايل بشكل مشفّر.
+This app is the phone companion for the CAIPO wearable. It is not the device, and it is not the AI server. It links the phone to the device over Bluetooth, sends the user's speech to FloBrain, plays the reply as audio, and stores the conversation and files on the phone, encrypted.
 
-الحالة الحالية مكتوبة في `docs/STATUS.md`. الخطة في `docs/CAIPO_BUILD_PLAN.md`.
+Current progress is in `docs/STATUS.md`. The plan is in `docs/CAIPO_BUILD_PLAN.md`.
 
-## دور التطبيق
+## What the app does
 
-CAIPO الجهاز بيسجّل الصوت. التطبيق:
+The CAIPO device records audio. The app:
 
-1. يلاقي الجهاز ويقترن به عبر Bluetooth Low Energy.
-2. يستقبل التسجيل كملف Opus داخل بروتوكول النقل R03.
-3. يحوّل الصوت لنص، يبعت النص لـ FloBrain، ويستقبل رد النص.
-4. يحوّل الرد لصوت Opus ويرجّعه للجهاز، وفي وضع المحاكاة يشغّله على سماعة الموبايل.
-5. يحفظ المحادثة والملفات على الموبايل، ويقفل الجلسة بعد مدة يختارها المستخدم.
+1. Finds the device and pairs over Bluetooth Low Energy.
+2. Receives the recording as an Opus file inside the R03 transfer protocol.
+3. Turns the audio into text, sends that text to FloBrain, and receives the text reply.
+4. Turns the reply into Opus audio and sends it back to the device. In simulator mode it also plays the reply on the phone speaker.
+5. Stores the conversation and files on the phone, and locks the session after a time the user chooses.
 
-الصوت والأوامر والحالة تمشي على البلوتوث طول ما الموبايل قريب من الجهاز. صور الكاميرا والفيديو والبث المباشر مش على البلوتوث. المسار ده مقترح ولسه مقفول في البناء الافتراضي، لأن عقد الواي فاي والأوامر لسه مش مؤكّد من الفيرموير.
+Voice, commands, and status stay on Bluetooth while the phone is near the device. Camera photos, video, and live streaming do not go over Bluetooth. That path is proposed and stays off in the default build, because the Wi-Fi and command contracts are not confirmed by firmware yet.
 
-## إيه اللي المستخدم بيشوفه
+## What the user sees
 
-بعد تسجيل الدخول ومقدمة قصيرة، الشريط السفلي فيه أربع شاشات:
+After sign-in and a short intro, the bottom bar has four screens:
 
-| الشاشة | بيعمله |
+| Screen | What it does |
 | --- | --- |
-| Dashboard | حالة الاتصال، البطارية، لون الحالة، آخر ملف محفوظ، وزر Talk to AI |
-| Conversation | سجل المحادثة المشفّر، بحث، حذف، وإعادة تشغيل رد الصوت |
-| Library | مقاطع الصوت مع شكل الموجة وسرعات من 0.5x إلى 2x، ومشاركة وحذف |
-| Settings | الجهاز، القفل التلقائي، البصمة، الشبكات، التصدير، حذف البيانات، About |
+| Dashboard | Connection, battery, status light, last saved file, and Talk to AI |
+| Conversation | Encrypted history, search, delete, and replay of the reply audio |
+| Library | Audio clips with a waveform and speeds from 0.5x to 2x, plus share and delete |
+| Settings | Device, auto-lock, biometrics, networks, export, delete local data, About |
 
-الإشعارات والتشخيص بيتفتحوا من شريط التطبيق أو من الإعدادات. شاشة الاقتران بتقترن بس، ومش بتشغّل حلقة الصوت.
+Notifications and Diagnostics open from the app bar or from Settings. The pairing screen only pairs. It does not run the voice loop.
 
-أزرار التصوير وتسجيل الفيديو والبث المباشر والـ LED والإيماءات وتحديث الفيرموير ظاهرة، ولو مش قادرة تشتغل بتقول السبب (`Needs device support` أو `Needs WiFi` أو إن البث المقترح مقفول). مفيش زر ميت، ومفيش نجاح متصنّع.
+Capture, Record video, Live view, LED, gestures, and firmware update are visible. When one cannot run, it says why (`Needs device support`, `Needs WiFi`, or that the proposed stream is off). There are no dead buttons and no fake success.
 
-## المعمارية
+## Architecture
 
 ```
-المستخدم
+User
    │
    ▼
-شاشات Flutter  (auth, shell, dashboard, conversation, library, settings)
+Flutter screens  (auth, shell, dashboard, conversation, library, settings)
    │
-   ├── SessionController        الجلسة، القفل، تسجيل الخروج
-   ├── VoiceLoopController      حلقة الصوت من الجهاز لحد FloBrain والرجوع
-   ├── PairingController        الاكتشاف والاقتران واستقبال الملفات
+   ├── SessionController        session, lock, sign-out
+   ├── VoiceLoopController      voice loop from the device to FloBrain and back
+   ├── PairingController        discovery, pairing, incoming files
    │
-   ├── الجهاز
-   │     sim  → SimCaipoController داخل التطبيق (CAIPO-SIM)
-   │     ble  → Kotlin / Swift عبر Pigeon، ثم الراديو
+   ├── Device
+   │     sim  → SimCaipoController inside the app (CAIPO-SIM)
+   │     ble  → Kotlin / Swift through Pigeon, then the radio
    │
    └── FloBrain
-         mock → ردود جاهزة جوه التطبيق، من غير شبكة
-         live → HTTPS على https://api.flobrain.ai
+         mock → canned replies inside the app, no network
+         live → HTTPS at https://api.flobrain.ai
 ```
 
-الاعتمادات بتتجمّع في `lib/core/di/injector.dart` بـ `get_it`. الألوان والمسافات في `lib/shared/theme/caipo_tokens.dart`. النصوص في `lib/shared/copy/app_strings.dart`.
+Dependencies are wired in `lib/core/di/injector.dart` with `get_it`. Colors and spacing live in `lib/shared/theme/caipo_tokens.dart`. Copy lives in `lib/shared/copy/app_strings.dart`.
 
-### طبقات الكود
+### Code layers
 
-| المجلد | دوره |
+| Folder | Role |
 | --- | --- |
-| `lib/features/` | الشاشات وتدفق المستخدم |
-| `lib/device/ble/` | الاكتشاف، الاتصال، الخلفية |
-| `lib/device/protocol/` | رسائل R03، التقسيم، إعادة الإرسال، أرشيف الملفات |
-| `lib/device/audio/` | Opus 16 kHz أحادي، 20 مللي ثانية |
-| `lib/device/sim/` | جهاز CAIPO-SIM وملف الصوت المرفق |
-| `lib/flobrain/` | عميل الـ API، التوكن، المستودعات، المحاكاة |
-| `lib/core/security/` | مفاتيح Keychain / Android Keystore وتشفير AES-GCM |
-| `android/` و `ios/` | البلوتوث الأصلي، الأيقونة، شاشة البداية، الأذونات |
+| `lib/features/` | Screens and user flows |
+| `lib/device/ble/` | Discovery, connection, background link |
+| `lib/device/protocol/` | R03 messages, chunking, retry, file archive |
+| `lib/device/audio/` | Opus, 16 kHz mono, 20 ms |
+| `lib/device/sim/` | The CAIPO-SIM device and the bundled sample audio |
+| `lib/flobrain/` | API client, tokens, repositories, mock backend |
+| `lib/core/security/` | Keychain / Android Keystore keys and AES-GCM |
+| `android/` and `ios/` | Native Bluetooth, icon, splash, permissions |
 
-الهوية المؤكدة للبلوتوث: خدمة `a1000000-5fa6-43f5-9827-201f62bd377d`، الخصائص `A1000001` حتى `A1000004`، واسم الإعلان يبدأ بـ `CAIPO`. ضربات القلب `0x10` بتتقرأ. قاعدة قطع الاتصال بعد 3 ثواني صمت موجودة ومقفولة لحد ما الفيرموير يبعت ضربات حقيقية.
+Confirmed Bluetooth identity: service `a1000000-5fa6-43f5-9827-201f62bd377d`, characteristics `A1000001` through `A1000004`, advertised name prefix `CAIPO`. Heartbeat opcode `0x10` is parsed. The rule that disconnects after 3 seconds of silence is implemented and stays off until real firmware sends heartbeats.
 
-النقل R03: الطلب والتقسيم والبيانات وخطأ النقل. المهلة 5 ثواني، وإعادة إرسال القطعة الفاشلة حتى 3 مرات. مفيش استكمال من نص الملف؛ إعادة المحاولة تبدأ النقل من الأول، والبايتات الناقصة بتتحفظ كملف `partial_`.
+R03 covers the request, chunks, metadata, and transfer errors. The timeout is 5 seconds, and a failed chunk is resent up to 3 times. There is no resume from the middle of a file. A retry starts the transfer again at the first chunk, and bytes already received are kept as a `partial_` file.
 
-الملفات بتتشفّر قبل ما تتكتب، حتى لو الشاشة مقفولة أو التطبيق في الخلفية. أندرويد بيفضّل الاتصال بخدمة أمامية. iOS بيستخدم استعادة `bluetooth-central`.
+Files are sealed before they are written, including while the screen is locked or the app is in the background. Android keeps the link with a connected-device foreground service. iOS uses `bluetooth-central` restoration.
 
-## حلقة الصوت
+## Voice loop
 
-1. الجهاز يبعت تسجيل Opus (نوع المحتوى `0x01`).
-2. التطبيق يفك الترميز.
-3. النص يروح لشات FloBrain.
-4. رد النص يتحول لصوت ويرجع للجهاز.
-5. سطر المحادثة يتسجل بعد ما الرد ينجح.
+1. The device sends an Opus recording (content type `0x01`).
+2. The app decodes it.
+3. The text goes to a FloBrain chat.
+4. The text reply becomes audio and goes back to the device.
+5. The conversation line is stored only after the reply succeeds.
 
-لو الإرسال فشل، التسجيل يفضل محفوظًا بحالة `Not sent` ومعاه Retry. النص والصوت ما بيتخسروش.
+If sending fails, the recording stays saved as `Not sent`, with Retry. The text and audio are not dropped.
 
-في الوضع الحي، تحويل الكلام لنص وتحويل النص لكلام لسه مش منشورين عند FloBrain. التطبيق بيرفضهم برسالة واضحة (`Speech to text is not available.` و `Text to speech is not available.`) ومش بيرجّع صوت فاضي.
+In live mode, speech-to-text and text-to-speech are not published by FloBrain yet. The app refuses them with a clear message (`Speech to text is not available.` and `Text to speech is not available.`). It does not return empty audio.
 
-## إيه اللي لسه مقفول
+## What stays off
 
-الأعلام دي كلها `false` في البناء العادي. وهي مقفولة، التطبيق لا ينادي المسار ولا يكتب الأمر:
+These flags are all `false` in a normal build. While a flag is off, the app does not call that route and does not write that opcode:
 
-| العلم | المعنى |
+| Flag | Meaning |
 | --- | --- |
-| `PROPOSED_SPEECH` | مسارات الكلام المقترحة |
-| `PROPOSED_MEDIA` | قراءة الصور والفيديو من FloBrain |
-| `PROPOSED_COMMANDS` | أوامر الحالة والتصوير والمزامنة |
-| `PROPOSED_WIFI` | إرسال شبكات الواي فاي للجهاز |
-| `PROPOSED_STREAM` | بث MJPEG على الشبكة المحلية |
+| `PROPOSED_SPEECH` | Proposed speech routes |
+| `PROPOSED_MEDIA` | Reading photos and video from FloBrain |
+| `PROPOSED_COMMANDS` | Status, capture, and sync commands |
+| `PROPOSED_WIFI` | Sending saved Wi-Fi networks to the device |
+| `PROPOSED_STREAM` | MJPEG streaming on the local network |
 
-صورة وصورة النظام والذكاء بدون نت مش في مخطط FloBrain الحالي، والإعدادات بتقول إنها غير متاحة. صوت اللغة وخيارات الصوت بتفضل على الموبايل، لأن مخطط الإعدادات ما عرّفش الحقول دي.
+Image input, a custom system prompt, and offline AI are not in the current FloBrain schema. Settings says they are not available. Voice and language stay on the phone, because the settings schema does not define those fields.
 
-بادئة التوكن في التطبيق هي `Token`، لأن مخطط OpenAPI اللي اتقري يوم 16 أكتوبر 2026 قال كده. وثيقة Notion قالت `Bearer`. الفرق متسجل في `docs/STATUS.md` لحد ما الباك إند يأكّد.
+The app sends the `Token` authorization prefix, because the OpenAPI schema read on 16 Oct 2026 says so. The Notion doc says `Bearer`. That conflict is recorded in `docs/STATUS.md` until the backend confirms it.
 
-## الاختبار والوضع الحي
+## Test and live
 
-الوضع بيتحدد وقت البناء، مش من زر جوه التطبيق:
+The mode is chosen at build time, not by a switch inside the app:
 
 ```bash
 flutter run --dart-define=DEVICE_MODE=sim --dart-define=BACKEND_MODE=mock
 ```
 
-الافتراضي من غير الأعلام هو `DEVICE_MODE=ble` و `BACKEND_MODE=live`.
+With no flags, the default is `DEVICE_MODE=ble` and `BACKEND_MODE=live`.
 
-| | الاختبار (`sim` + `mock`) | الحي (`ble` + `live`) |
+| | Test (`sim` + `mock`) | Live (`ble` + `live`) |
 | --- | --- | --- |
-| الجهاز | CAIPO-SIM جوه التطبيق. اسمه ظاهر بعد الاتصال: `Connected to CAIPO-SIM.` | بحث بلوتوث عن جهاز حقيقي اسمه يبدأ بـ CAIPO |
-| الراديو | مفيش | Kotlin على أندرويد، Swift على iOS |
-| FloBrain | ردود جاهزة جوه التطبيق. العنوان `http://mock.flobrain.local` ومش بيفتح شبكة | `https://api.flobrain.ai` |
-| تسجيل الدخول | أي إيميل وأي كلمة سر | بيفشل لو جسم التوكن مش فيه الحقول المتوقعة. التطبيق ما بيخترعش نجاح |
-| حلقة الصوت | التسجيل المرفق `assets/sim/speech.wav`، والرد WAV يتسمع من سماعة الموبايل | محتاج جهاز حقيقي ومسارات كلام حية. المسارات الحية لسه بترفض عن قصد |
+| Device | CAIPO-SIM inside the app. After connect the line is `Connected to CAIPO-SIM.` | Bluetooth scan for a real device whose name starts with CAIPO |
+| Radio | None | Kotlin on Android, Swift on iOS |
+| FloBrain | Canned replies inside the app. Base URL `http://mock.flobrain.local`. No socket | `https://api.flobrain.ai` |
+| Sign-in | Any email and password | Fails closed when the token JSON does not have the expected fields. The app does not invent a success |
+| Voice loop | Bundled `assets/sim/speech.wav`. The reply WAV plays on the phone speaker | Needs a real device and live speech routes. Those live routes still fail on purpose |
 | About | `sim / mock` | `ble / live` |
-| ملف التجربة | `build/apk/caipo-sim.apk` | `build/apk/caipo-live.apk` |
+| Build | `build/apk/caipo-sim.apk` | `build/apk/caipo-live.apk` |
 
-### تجربة ملف الاختبار
+### Trying the test APK
 
-1. ثبّت `build/apk/caipo-sim.apk`.
-2. ادخل بأي إيميل وكلمة سر.
-3. خلّص المقدمة.
-4. اقترن بـ CAIPO-SIM.
-5. من Dashboard أو Conversation اضغط Talk to AI.
-6. شغّل الرد. هتسمعه من سماعة الموبايل، والمكتبة هتعرض المقطع.
-7. من Settings > About اتأكد إن الوضع `sim / mock`.
-8. Export my data بيشارك نص المحادثة. Delete all local data بيمسح المحادثة والملفات والمفاتيح والشبكات وبيخرج من الحساب.
+1. Install `build/apk/caipo-sim.apk`.
+2. Sign in with any email and password.
+3. Finish the short intro.
+4. Pair with CAIPO-SIM.
+5. On Dashboard or Conversation, tap Talk to AI.
+6. Play the reply. It comes from the phone speaker, and the library lists the clip.
+7. In Settings > About, confirm the mode is `sim / mock`.
+8. Export my data shares the conversation text. Delete all local data wipes the conversation, files, keys, and saved networks, then signs out.
 
-القفل التلقائي من دقيقة لـ 30، والافتراضي 15. البصمة مقفولة لحد ما تتفتح من الإعدادات.
+Auto-lock is 1 to 30 minutes, default 15. Biometric unlock stays off until Settings turns it on.
 
-### تجربة الملف الحي
+### Trying the live APK
 
-1. ثبّت `build/apk/caipo-live.apk`.
-2. التطبيق يدور على CAIPO حقيقي وينادي `https://api.flobrain.ai`.
-3. تسجيل الدخول مش هيعدّي لو السيرفر رجّع توكن بشكل مختلف عن اللي العميل مستنيه.
-4. التصوير والفيديو والبث والـ LED والإيماءات والتحديث هيقولوا ليه مش شغالين.
-5. البث المباشر مش هيعرض صورة طول ما `PROPOSED_STREAM` مقفول.
+1. Install `build/apk/caipo-live.apk`.
+2. The app looks for a real CAIPO and calls `https://api.flobrain.ai`.
+3. Sign-in does not succeed if the server returns token fields the client does not expect.
+4. Capture, video, live view, LED, gestures, and firmware update say why they cannot run.
+5. Live view does not show a picture while `PROPOSED_STREAM` is off.
 
-اختبارات الوحدة (`flutter test`) بتستخدم المحاكاة والمحول النصّي، ومش بتتصل بالسيرفر الحي ولا بجهاز بلوتوث.
+Unit tests (`flutter test`) use the simulator and a scripted HTTP adapter. They do not call the live server or a Bluetooth radio.
 
-## إيه اللي بره التطبيق
+## What sits outside this app
 
-| الجزء | صاحبه |
+| Piece | Owner |
 | --- | --- |
-| GATT على ESP32-S3 وضربات القلب والخصائص المشفّرة | فريق الجهاز |
-| HTTPS على `api.flobrain.ai` وشكل توكن تسجيل الدخول | FloBrain |
-| تحويل الكلام الحي | FloBrain. التطبيق بيرفضه لحد ما المسار يتأكد |
-| حفظ التسجيلات على الجهاز والموبايل بعيد | فيرموير، ولسه متختبرش |
-| بناء iOS | محتاج Mac |
+| ESP32-S3 GATT, heartbeats, and encrypted characteristics | Device team |
+| HTTPS on `api.flobrain.ai` and the sign-in token JSON | FloBrain |
+| Live speech-to-text and text-to-speech | FloBrain. The app refuses these until the routes are confirmed |
+| Keeping recordings on the device while the phone is away | Firmware, not verified yet |
+| An iOS build | Needs a Mac |

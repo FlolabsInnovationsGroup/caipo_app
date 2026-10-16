@@ -1,13 +1,23 @@
 import '../../core/config/constants.dart';
 
-/// Logical GATT map. UUID values live only in constants.dart.
+/// GATT map confirmed by the IoT team. UUID values live only in constants.dart.
 class CaipoCharacteristics {
   const CaipoCharacteristics();
 
   String get primaryService => kPrimaryServiceUuid;
-  String get audioNotify => kAudioNotifyCharacteristicUuid;
+
+  /// Notify. Device to app, including R03 transfers.
+  String get inbound => kInboundCharacteristicUuid;
+
+  /// Read. Codec ID.
   String get audioCodec => kAudioCodecCharacteristicUuid;
-  String get outboundAudio => kOutboundAudioCharacteristicUuid;
+
+  /// Write. App to device, including R03 transfers.
+  String get outbound => kOutboundCharacteristicUuid;
+
+  /// Notify and write. Heartbeat and non-transfer commands.
+  String get commands => kCommandCharacteristicUuid;
+
   String get batteryService => kBatteryServiceUuid;
   String get batteryLevel => kBatteryLevelCharacteristicUuid;
   String get deviceInfoService => kDeviceInfoServiceUuid;

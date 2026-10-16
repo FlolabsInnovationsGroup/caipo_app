@@ -4,8 +4,8 @@ import 'package:crypto/crypto.dart';
 
 import '../../core/config/constants.dart';
 
-/// R03 integrity check. The spec allows CRC-32 or SHA-256 and does not choose.
-/// Both are implemented. [kTransferChecksumAlgorithm] selects the placeholder.
+/// R03 integrity check. CAIPO uses CRC-32. SHA-256 stays available for tests
+/// and is not written on the wire.
 class TransferChecksum {
   const TransferChecksum();
 

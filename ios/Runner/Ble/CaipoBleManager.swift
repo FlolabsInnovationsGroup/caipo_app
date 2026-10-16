@@ -111,6 +111,12 @@ final class CaipoBleManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         peripherals[uuid]?.state == .connected
     }
 
+    /// With-response write size. iOS has no MTU request; this is the value CoreBluetooth reports.
+    func maximumWriteLength(uuid: String) -> Int {
+        guard let peripheral = peripherals[uuid] else { return 20 }
+        return max(peripheral.maximumWriteValueLength(for: .withResponse), 20)
+    }
+
     func read(uuid: String, serviceUuid: String, characteristicUuid: String, completion: @escaping (Result<FlutterStandardTypedData, Error>) -> Void) {
         guard let characteristic = find(uuid: uuid, serviceUuid: serviceUuid, characteristicUuid: characteristicUuid),
               let peripheral = peripherals[uuid] else {

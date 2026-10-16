@@ -339,6 +339,12 @@ protocol BleHostApi {
   func getBluetoothState() throws -> String
   func enableBluetooth() async throws -> Bool
   func isPeripheralConnected(uuid: String) throws -> Bool
+  /// Largest with-response write, in bytes.
+  ///
+  /// iOS returns `maximumWriteValueLength(for: .withResponse)`. Android
+  /// returns the negotiated ATT payload (`mtu - 3`). The app does not ask
+  /// iOS for an MTU.
+  func maximumWriteLength(peripheralUuid: String) async throws -> Int64
   func startRssiStreaming(uuid: String) throws
   func stopRssiStreaming(uuid: String) throws
   /// Opens the system Bluetooth settings page. iOS opens the app's Settings
@@ -546,6 +552,28 @@ class BleHostApiSetup {
       }
     } else {
       isPeripheralConnectedChannel.setMessageHandler(nil)
+    }
+    /// Largest with-response write, in bytes.
+    ///
+    /// iOS returns `maximumWriteValueLength(for: .withResponse)`. Android
+    /// returns the negotiated ATT payload (`mtu - 3`). The app does not ask
+    /// iOS for an MTU.
+    let maximumWriteLengthChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.caipo_app.BleHostApi.maximumWriteLength\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      maximumWriteLengthChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let peripheralUuidArg = args[0] as! String
+        Task { @MainActor in
+          do {
+            let result = try await api.maximumWriteLength(peripheralUuid: peripheralUuidArg)
+            reply(wrapResult(result))
+          } catch {
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      maximumWriteLengthChannel.setMessageHandler(nil)
     }
     let startRssiStreamingChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.caipo_app.BleHostApi.startRssiStreaming\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

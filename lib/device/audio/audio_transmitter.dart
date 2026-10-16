@@ -1,26 +1,27 @@
 import 'dart:typed_data';
 
-import 'opus_encoder.dart';
+import '../../core/config/constants.dart';
+import '../protocol/transfer_manager.dart';
+import 'opus_container.dart';
 
-class TransmitResult {
-  const TransmitResult.mock({required this.detail});
-
-  final String detail;
-  final bool sent = false;
-}
-
-/// Phase 4 mock for R02.3. Nothing is written to the outbound characteristic.
+/// Packs Opus frames into one R03 audio transfer.
+///
+/// PCM-to-Opus encoding is not in this build. The caller passes frames that
+/// are already Opus, 16 kHz mono, 20 ms. Nothing is written to GATT here.
 class AudioTransmitter {
-  const AudioTransmitter({this.encoder = const OpusEncoder()});
+  const AudioTransmitter({
+    this.container = const OpusFrameContainer(),
+    this.transfers = const TransferManager(),
+  });
 
-  final OpusEncoder encoder;
+  final OpusFrameContainer container;
+  final TransferManager transfers;
 
-  Future<TransmitResult> sendResponse(Uint8List pcmOrEncoded) async {
-    encoder.encode(pcmOrEncoded);
-    return const TransmitResult.mock(
-      detail:
-          'Outbound audio is not implemented. The characteristic and the '
-          'R03 wire format are both TBD, so no bytes were written.',
+  PreparedTransfer prepareReply(List<Uint8List> opusFrames, {required int transferId}) {
+    return transfers.prepare(
+      payload: container.pack(opusFrames),
+      transferId: transferId,
+      contentType: kContentTypeAudio,
     );
   }
 }

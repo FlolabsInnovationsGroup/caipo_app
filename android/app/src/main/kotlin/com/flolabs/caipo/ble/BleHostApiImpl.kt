@@ -45,8 +45,10 @@ class BleHostApiImpl(
         CaipoBleForegroundService.stop(context)
     }
 
-    override suspend fun requestBond(uuid: String): Boolean {
-        return manager.isConnected(uuid)
+    override suspend fun requestBond(uuid: String): Boolean = suspendCancellableCoroutine { continuation ->
+        manager.bond(uuid) { bonded ->
+            if (continuation.isActive) continuation.resume(bonded)
+        }
     }
 
     override suspend fun readCharacteristic(
@@ -121,6 +123,10 @@ class BleHostApiImpl(
     }
 
     override fun isPeripheralConnected(uuid: String): Boolean = manager.isConnected(uuid)
+
+    override suspend fun maximumWriteLength(peripheralUuid: String): Long {
+        return manager.maximumWriteLength(peripheralUuid).toLong()
+    }
 
     override fun startRssiStreaming(uuid: String) = manager.startRssi(uuid)
 

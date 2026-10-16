@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.ScanCallback
@@ -57,6 +58,7 @@ class CaipoBleManager private constructor(private val app: Application) {
     private val writes = HashMap<String, (Result<Unit>) -> Unit>()
     private val subscribes = HashMap<String, (Result<Unit>) -> Unit>()
     private val readySent = HashSet<String>()
+    private val negotiatedMtu = HashMap<String, Int>()
     private var rssiAddress: String? = null
     private var callbacks: Callbacks? = null
     var connectTimeoutMs: Long = 30_000
@@ -180,6 +182,76 @@ class CaipoBleManager private constructor(private val app: Application) {
         return bluetoothManager.getConnectionState(gatt.device, BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED
     }
 
+    /** ATT payload for a with-response write. iOS reads this from CoreBluetooth; Android uses mtu - 3. */
+    fun maximumWriteLength(address: String): Int {
+        val mtu = negotiatedMtu[address.uppercase()] ?: 23
+        return (mtu - 3).coerceAtLeast(20)
+    }
+
+    /// Starts SMP bonding. The 6-second supervision timeout is requested by
+    /// the firmware, not by this central.
+    @SuppressLint("MissingPermission")
+    fun bond(address: String, done: (Boolean) -> Unit) {
+        val radio = adapter
+        if (radio == null) {
+            done(false)
+            return
+        }
+        val normalized = address.uppercase()
+        val device = try {
+            radio.getRemoteDevice(normalized)
+        } catch (_: IllegalArgumentException) {
+            done(false)
+            return
+        }
+        if (device.bondState == BluetoothDevice.BOND_BONDED) {
+            done(true)
+            return
+        }
+        var finished = false
+        var receiver: BroadcastReceiver? = null
+        var finish: (Boolean) -> Unit = {}
+        val timeout = Runnable { finish(false) }
+        finish = { ok ->
+            if (!finished) {
+                finished = true
+                main.removeCallbacks(timeout)
+                receiver?.let {
+                    try {
+                        app.unregisterReceiver(it)
+                    } catch (_: Exception) {
+                    }
+                }
+                done(ok)
+            }
+        }
+        receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action != BluetoothDevice.ACTION_BOND_STATE_CHANGED) return
+                val extra = if (Build.VERSION.SDK_INT >= 33) {
+                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                } ?: return
+                if (extra.address.uppercase() != normalized) return
+                when (intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)) {
+                    BluetoothDevice.BOND_BONDED -> finish(true)
+                    BluetoothDevice.BOND_NONE -> finish(false)
+                }
+            }
+        }
+        ContextCompat.registerReceiver(
+            app,
+            receiver,
+            IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        main.postDelayed(timeout, connectTimeoutMs)
+        val started = device.bondState == BluetoothDevice.BOND_BONDING || device.createBond()
+        if (!started) finish(false)
+    }
+
     @SuppressLint("MissingPermission")
     fun read(address: String, serviceUuid: String, characteristicUuid: String, done: (Result<ByteArray>) -> Unit) {
         val gatt = gatts[address.uppercase()]
@@ -252,7 +324,7 @@ class CaipoBleManager private constructor(private val app: Application) {
                 completeQueue()
                 return@enqueue
             }
-            val value = BluetoothGattCharacteristic.ENABLE_NOTIFICATION_VALUE
+            val value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
             val started = if (Build.VERSION.SDK_INT >= 33) {
                 gatt.writeDescriptor(cccd, value) == BluetoothGatt.GATT_SUCCESS
             } else {
@@ -337,6 +409,9 @@ class CaipoBleManager private constructor(private val app: Application) {
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
             val address = gatt.device.address.uppercase()
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                negotiatedMtu[address] = mtu
+            }
             main.post {
                 completeQueue()
                 if (readySent.contains(address)) return@post

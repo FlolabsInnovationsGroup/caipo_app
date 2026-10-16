@@ -54,9 +54,18 @@ class SessionController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> signOut() async {
-    await auth.signOut();
-    signedIn = false;
+    try {
+      await auth.signOut();
+    } finally {
+      signedIn = false;
+      locked = false;
+      notifyListeners();
+    }
+  }
+
+  void unlock() {
     locked = false;
+    noteActivity();
     notifyListeners();
   }
 

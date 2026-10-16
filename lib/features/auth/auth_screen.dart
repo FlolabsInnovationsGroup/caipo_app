@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config/app_mode.dart';
 import '../../core/errors/app_exception.dart';
+import 'biometric_gate.dart';
 import 'session_controller.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key, required this.session, required this.locked});
+  const AuthScreen({
+    super.key,
+    required this.session,
+    required this.locked,
+    this.biometricEnabled = false,
+    this.biometrics,
+  });
 
   final SessionController session;
   final bool locked;
+  final bool biometricEnabled;
+  final BiometricGate? biometrics;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -59,6 +69,10 @@ class _AuthScreenState extends State<AuthScreen> {
                   ? 'Sign in again to continue. Your CAIPO pairing is still saved on this phone.'
                   : 'Tokens stay in the Keychain on iOS and the Android Keystore.',
             ),
+            if (useMockBackend) ...[
+              const SizedBox(height: 12),
+              const Text('Simulated FloBrain. Any email and password will sign in.'),
+            ],
             const SizedBox(height: 24),
             TextField(
               controller: _email,
@@ -78,6 +92,26 @@ class _AuthScreenState extends State<AuthScreen> {
               Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
             const SizedBox(height: 20),
+            if (showBiometricUnlock(locked: widget.locked, enabled: widget.biometricEnabled) &&
+                widget.biometrics != null)
+              FilledButton(
+                onPressed: _busy
+                    ? null
+                    : () async {
+                        setState(() => _busy = true);
+                        final opened = await widget.biometrics!.unlock();
+                        if (!mounted) return;
+                        setState(() => _busy = false);
+                        if (opened) {
+                          widget.session.unlock();
+                        } else {
+                          setState(() => _error = 'Biometric unlock was not accepted. Sign in with your password.');
+                        }
+                      },
+                child: Text(_busy ? 'Please wait…' : 'Unlock'),
+              ),
+            if (showBiometricUnlock(locked: widget.locked, enabled: widget.biometricEnabled))
+              const SizedBox(height: 12),
             FilledButton(
               onPressed: _busy ? null : _submit,
               child: Text(_busy ? 'Please wait…' : (_registering ? 'Create account' : 'Sign in')),

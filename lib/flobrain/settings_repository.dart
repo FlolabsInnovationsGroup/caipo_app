@@ -9,13 +9,51 @@ class SettingsRepository {
   SettingsRepository(this._api, this._preferences);
 
   static const autoLockKey = 'caipo.auto_lock_minutes';
+  static const autoConnectKey = 'caipo.auto_connect';
+  static const voiceKey = 'caipo.ai_voice';
+  static const languageKey = 'caipo.ai_language';
+  static const biometricKey = 'caipo.biometric_unlock';
+  static const minAutoLockMinutes = 1;
+  static const maxAutoLockMinutes = 30;
+  static const voices = ['Default', 'Clear', 'Warm'];
+  static const languages = ['English', 'Arabic'];
 
   final FloBrainApi _api;
   final SharedPreferences _preferences;
 
-  int autoLockMinutes() => _preferences.getInt(autoLockKey) ?? kDefaultAutoLockMinutes;
+  int autoLockMinutes() {
+    final stored = _preferences.getInt(autoLockKey) ?? kDefaultAutoLockMinutes;
+    return stored.clamp(minAutoLockMinutes, maxAutoLockMinutes);
+  }
 
-  Future<void> setAutoLockMinutes(int minutes) => _preferences.setInt(autoLockKey, minutes);
+  Future<void> setAutoLockMinutes(int minutes) {
+    final clamped = minutes.clamp(minAutoLockMinutes, maxAutoLockMinutes);
+    return _preferences.setInt(autoLockKey, clamped);
+  }
+
+  bool autoConnect() => _preferences.getBool(autoConnectKey) ?? true;
+
+  Future<void> setAutoConnect(bool value) => _preferences.setBool(autoConnectKey, value);
+
+  /// The 16 Oct 2026 schema for `/api/settings/preferences/` defines no voice
+  /// or language fields, so these stay on the phone.
+  String aiVoice() {
+    final stored = _preferences.getString(voiceKey);
+    return voices.contains(stored) ? stored! : voices.first;
+  }
+
+  Future<void> setAiVoice(String value) => _preferences.setString(voiceKey, value);
+
+  String aiLanguage() {
+    final stored = _preferences.getString(languageKey);
+    return languages.contains(stored) ? stored! : languages.first;
+  }
+
+  Future<void> setAiLanguage(String value) => _preferences.setString(languageKey, value);
+
+  bool biometricUnlock() => _preferences.getBool(biometricKey) ?? false;
+
+  Future<void> setBiometricUnlock(bool value) => _preferences.setBool(biometricKey, value);
 
   Future<Map<String, dynamic>> preferences() async {
     return _object(await _api.send('GET', '/api/settings/preferences/'));

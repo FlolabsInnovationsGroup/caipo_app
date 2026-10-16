@@ -1,10 +1,10 @@
 import '../../core/config/constants.dart';
 
-/// R03 retry parameters that are specified: 3 attempts, 5 second authorisation
-/// timeout, exponential backoff, resend the failed chunk only.
+/// R03: wait 5 seconds, then retransmit only the failed chunk, up to 3 times.
 ///
-/// The spec does not give the backoff base. [delays] uses the only exponential
-/// series the spec defines (R01's 1s, 2s, 4s). See NOTES.md.
+/// [delays] is the R01 reconnect series. The transfer exchange does not use
+/// it between chunk retransmits. It retransmits the named chunk as soon as
+/// TRANSFER_ERROR arrives.
 class TransferRetryPolicy {
   const TransferRetryPolicy({
     this.maxAttempts = kTransferMaxAttempts,

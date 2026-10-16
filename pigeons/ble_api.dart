@@ -80,6 +80,14 @@ abstract class BleHostApi {
 
   bool isPeripheralConnected(String uuid);
 
+  /// Largest with-response write, in bytes.
+  ///
+  /// iOS returns `maximumWriteValueLength(for: .withResponse)`. Android
+  /// returns the negotiated ATT payload (`mtu - 3`). The app does not ask
+  /// iOS for an MTU.
+  @async
+  int maximumWriteLength(String peripheralUuid);
+
   void startRssiStreaming(String uuid);
   void stopRssiStreaming(String uuid);
 

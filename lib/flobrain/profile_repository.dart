@@ -27,8 +27,12 @@ class ProfileRepository {
     );
   }
 
-  Future<void> deleteAccount() async {
-    await _api.send('POST', '/api/profile/delete/');
+  Future<void> deleteAccount({required String password}) async {
+    await _api.send(
+      'POST',
+      '/api/profile/delete/',
+      data: {kPasswordJsonField: password},
+    );
     await _api.tokenStore.clear();
   }
 

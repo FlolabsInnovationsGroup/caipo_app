@@ -51,7 +51,7 @@ class DeviceConnection {
     });
 
     try {
-      await bridge.hostApi.manageDevice(deviceId, kRequiresBond);
+      await bridge.controller.manageDevice(deviceId, kRequiresBond);
       final winner = await Future.any<Object>([
         ready.future,
         failed.future,
@@ -65,16 +65,20 @@ class DeviceConnection {
       final event = winner as DeviceReadyEvent;
       final serviceIds = event.services.map((service) => service.uuid).toList();
       if (!characteristics.hasService(serviceIds, characteristics.primaryService)) {
-        await bridge.hostApi.unmanageDevice(deviceId);
+        await bridge.controller.unmanageDevice(deviceId);
         throw const ConnectFailed(PairingFailure.serviceMissing);
       }
+      // Android starts SMP bonding here. iOS cannot start it. requestBond
+      // on iOS returns success, and the pairing dialog appears when the
+      // firmware's encrypted characteristics are accessed.
       if (kRequiresBond) {
-        final bonded = await bridge.hostApi.requestBond(deviceId);
+        final bonded = await bridge.controller.requestBond(deviceId);
         if (!bonded) {
-          await bridge.hostApi.unmanageDevice(deviceId);
+          await bridge.controller.unmanageDevice(deviceId);
           throw const ConnectFailed(PairingFailure.bondFailed);
         }
       }
+      await _subscribeNotifications(deviceId, event.services);
       final battery = await _readBattery(deviceId, event.services);
       final codec = await _readCodec(deviceId, event.services);
       final info = await _readInfo(deviceId, event.services);
@@ -85,7 +89,7 @@ class DeviceConnection {
         information: info,
       );
     } on _ConnectTimedOut {
-      await bridge.hostApi.unmanageDevice(deviceId);
+      await bridge.controller.unmanageDevice(deviceId);
       throw const ConnectFailed(PairingFailure.connectTimeout);
     } finally {
       await readySub.cancel();
@@ -93,16 +97,56 @@ class DeviceConnection {
     }
   }
 
-  Future<void> disconnect(String deviceId) => bridge.hostApi.unmanageDevice(deviceId);
+  Future<void> disconnect(String deviceId) => bridge.controller.unmanageDevice(deviceId);
 
-  Future<bool> isConnected(String deviceId) => bridge.hostApi.isPeripheralConnected(deviceId);
+  Future<bool> isConnected(String deviceId) => bridge.controller.isPeripheralConnected(deviceId);
+
+  Future<int> maximumWriteLength(String deviceId) {
+    return bridge.controller.maximumWriteLength(deviceId);
+  }
+
+  Future<void> writeOutbound(String deviceId, Uint8List data) {
+    return bridge.controller.writeCharacteristic(
+      deviceId,
+      characteristics.primaryService,
+      characteristics.outbound,
+      data,
+    );
+  }
+
+  Future<void> writeCommand(String deviceId, Uint8List data) {
+    return bridge.controller.writeCharacteristic(
+      deviceId,
+      characteristics.primaryService,
+      characteristics.commands,
+      data,
+    );
+  }
+
+  Future<void> _subscribeNotifications(String deviceId, List<BleService> services) async {
+    for (final characteristic in [characteristics.inbound, characteristics.commands]) {
+      if (!_has(services, characteristics.primaryService, characteristic)) {
+        logger.warn('Characteristic $characteristic is not on the device yet.');
+        continue;
+      }
+      try {
+        await bridge.controller.subscribeCharacteristic(
+          deviceId,
+          characteristics.primaryService,
+          characteristic,
+        );
+      } catch (error) {
+        logger.warn('Subscribe $characteristic failed: $error');
+      }
+    }
+  }
 
   Future<int?> _readBattery(String deviceId, List<BleService> services) async {
     if (!_has(services, characteristics.batteryService, characteristics.batteryLevel)) {
       return null;
     }
     try {
-      final bytes = await bridge.hostApi.readCharacteristic(
+      final bytes = await bridge.controller.readCharacteristic(
         deviceId,
         characteristics.batteryService,
         characteristics.batteryLevel,
@@ -119,7 +163,7 @@ class DeviceConnection {
       return null;
     }
     try {
-      final bytes = await bridge.hostApi.readCharacteristic(
+      final bytes = await bridge.controller.readCharacteristic(
         deviceId,
         characteristics.primaryService,
         characteristics.audioCodec,
@@ -141,7 +185,7 @@ class DeviceConnection {
     Future<String?> read(String characteristic) async {
       if (!_has(services, characteristics.deviceInfoService, characteristic)) return null;
       try {
-        final bytes = await bridge.hostApi.readCharacteristic(
+        final bytes = await bridge.controller.readCharacteristic(
           deviceId,
           characteristics.deviceInfoService,
           characteristic,
@@ -184,9 +228,8 @@ class _ConnectTimedOut implements Exception {
   const _ConnectTimedOut();
 }
 
-/// CAIPO's own device type, registered the way OMI's CustomDeviceConnection
-/// adds a third-party device: its own service UUID, codec and (still TBD)
-/// command opcodes. It does not reuse an OMI device-type name.
+/// CAIPO's own device type. Service and characteristic UUIDs are the IoT
+/// contract, not an OMI device-type name.
 class CaipoDeviceConnection {
   CaipoDeviceConnection({required this.deviceId, required this.connection});
 
@@ -196,17 +239,14 @@ class CaipoDeviceConnection {
   static const deviceTypeName = 'caipo';
 
   String get serviceUuid => kPrimaryServiceUuid;
-  String get audioCharacteristicUuid => kAudioNotifyCharacteristicUuid;
+  String get inboundCharacteristicUuid => kInboundCharacteristicUuid;
 
-  /// Control opcodes are TBD. No mute, unmute or vendor command is sent.
+  /// Heartbeat is device to app. Other non-transfer command bytes are not
+  /// in the IoT contract, so none are sent.
   int? get unmuteCommandCode => null;
   int? get muteCommandCode => null;
 
   Future<GattSession> connect() => connection.connect(deviceId);
 
   Future<void> disconnect() => connection.disconnect(deviceId);
-
-  /// Placeholder for a future control write. Returns an empty frame because
-  /// the opcode bytes are undefined.
-  Uint8List encodeCommand(int commandCode, List<int> data) => Uint8List(0);
 }

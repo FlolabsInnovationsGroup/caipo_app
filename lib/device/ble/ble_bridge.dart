@@ -3,11 +3,18 @@ import 'dart:typed_data';
 
 import 'package:caipo_app/gen/ble_api.g.dart';
 
-/// Native → Dart event hub. One instance is registered with Pigeon.
-class BleBridge extends BleFlutterApi {
-  BleBridge({BleHostApi? hostApi}) : hostApi = hostApi ?? BleHostApi();
+import 'ble_controller.dart';
 
-  final BleHostApi hostApi;
+/// Native → Dart event hub. One instance is registered with Pigeon.
+///
+/// Pass a [BleController] to skip the radio. The in-app device does that
+/// from `createSimulatedBridge`.
+class BleBridge extends BleFlutterApi {
+  BleBridge({BleController? controller}) : controller = controller ?? NativeBleController() {
+    if (controller == null) bind();
+  }
+
+  BleController controller;
 
   final bluetoothState = StreamController<String>.broadcast();
   final discoveries = StreamController<BlePeripheral>.broadcast();

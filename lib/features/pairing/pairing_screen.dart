@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config/app_mode.dart';
 import '../../device/ble/pairing_failure.dart';
-import '../../device/device_state.dart';
-import '../../flobrain/settings_repository.dart';
-import '../auth/session_controller.dart';
+import '../../shared/copy/app_strings.dart';
+import '../../shared/feedback/haptics.dart';
+import '../../shared/theme/caipo_tokens.dart';
+import '../shell/sim_status.dart';
 import 'pairing_controller.dart';
 
 class PairingScreen extends StatelessWidget {
-  const PairingScreen({
-    super.key,
-    required this.session,
-    required this.pairing,
-    required this.settings,
-  });
+  const PairingScreen({super.key, required this.pairing});
 
-  final SessionController session;
   final PairingController pairing;
-  final SettingsRepository settings;
 
   @override
   Widget build(BuildContext context) {
@@ -26,38 +21,52 @@ class PairingScreen extends StatelessWidget {
         final failure = pairing.failure;
         return Scaffold(
           appBar: AppBar(
-            title: const Text('CAIPO'),
+            title: const Text(AppStrings.pair),
             actions: [
               IconButton(
-                tooltip: 'Refresh',
-                onPressed: pairing.scanning ? null : pairing.refresh,
+                tooltip: AppStrings.refresh,
+                onPressed: () {
+                  if (pairing.scanning) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Still looking for CAIPO.')),
+                    );
+                    return;
+                  }
+                  pairing.refresh();
+                },
                 icon: const Icon(Icons.refresh),
-              ),
-              IconButton(
-                tooltip: 'Sign out',
-                onPressed: session.signOut,
-                icon: const Icon(Icons.logout),
               ),
             ],
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(CaipoSpace.m),
             children: [
-              Text(_statusLabel(pairing.link), style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text('Bluetooth: ${pairing.bluetoothState}'),
+              Text(linkStatusLabel(pairing.link), style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: CaipoSpace.s),
+              Text('${AppStrings.bluetooth}: ${pairing.bluetoothState}'),
+              if (useSimulatedDevice)
+                Padding(
+                  padding: const EdgeInsets.only(top: CaipoSpace.s),
+                  child: Text(
+                    simulatedDeviceStatus(link: pairing.link, scanning: pairing.scanning),
+                  ),
+                ),
+              if (pairing.codecError != null) ...[
+                const SizedBox(height: CaipoSpace.m),
+                Text(pairing.codecError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
               if (failure != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: CaipoSpace.m),
                 Material(
                   color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(CaipoSpace.radius),
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(CaipoSpace.m),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(failure.title, style: Theme.of(context).textTheme.titleSmall),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: CaipoSpace.xs),
                         Text(failure.message),
                         if (failure.opensSettings)
                           Align(
@@ -69,7 +78,7 @@ class PairingScreen extends StatelessWidget {
                                 }
                                 await pairing.openSettings();
                               },
-                              child: const Text('Open settings'),
+                              child: const Text(AppStrings.openSettings),
                             ),
                           ),
                       ],
@@ -77,24 +86,12 @@ class PairingScreen extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
-              DropdownButton<int>(
-                value: settings.autoLockMinutes(),
-                items: const [1, 5, 15, 60]
-                    .map((minutes) => DropdownMenuItem(value: minutes, child: Text('Auto-lock after $minutes min')))
-                    .toList(),
-                onChanged: (minutes) async {
-                  if (minutes == null) return;
-                  await settings.setAutoLockMinutes(minutes);
-                  await session.noteActivity();
-                },
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: CaipoSpace.m),
               if (pairing.scanning) const LinearProgressIndicator(),
               if (pairing.devices.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Text('No devices yet. Refresh to scan, or reconnect a device you have paired before.'),
+                  padding: EdgeInsets.symmetric(vertical: CaipoSpace.l),
+                  child: Text(AppStrings.noDevices),
                 ),
               for (final device in pairing.devices)
                 ListTile(
@@ -104,48 +101,28 @@ class PairingScreen extends StatelessWidget {
                     [
                       if (device.nearby) 'Nearby' else 'Saved',
                       if (device.rssi != null) '${device.rssi} dBm',
-                      if (device.batteryPercent != null) 'Battery ${device.batteryPercent}%',
-                      if (pairing.connectedId == device.id) 'Connected',
+                      if (device.batteryPercent != null) '${AppStrings.battery} ${device.batteryPercent}%',
+                      if (pairing.connectedId == device.id) AppStrings.connected,
                     ].join(' · '),
                   ),
                   trailing: pairing.connectedId == device.id
                       ? IconButton(
-                          tooltip: 'Forget',
+                          tooltip: AppStrings.forget,
                           onPressed: () => pairing.forget(device.id),
                           icon: const Icon(Icons.link_off),
                         )
                       : const Icon(Icons.chevron_right),
-                  onTap: pairing.connectedId == device.id ? null : () => pairing.connect(device.id, device.name),
+                  onTap: pairing.connectedId == device.id
+                      ? null
+                      : () {
+                          caipoHaptic();
+                          pairing.connect(device.id, device.name);
+                        },
                 ),
             ],
           ),
         );
       },
     );
-  }
-
-  String _statusLabel(CaipoLinkState state) {
-    switch (state) {
-      case CaipoLinkState.disconnected:
-        return 'Not connected';
-      case CaipoLinkState.scanning:
-        return 'Scanning';
-      case CaipoLinkState.notFound:
-        return 'No device found';
-      case CaipoLinkState.connecting:
-        return 'Connecting';
-      case CaipoLinkState.pairingFailed:
-        return 'Pairing failed';
-      case CaipoLinkState.connected:
-        return 'Connected';
-      case CaipoLinkState.reconnecting:
-        return 'Reconnecting';
-      case CaipoLinkState.listening:
-        return 'Listening';
-      case CaipoLinkState.processing:
-        return 'Processing';
-      case CaipoLinkState.responding:
-        return 'Responding';
-    }
   }
 }

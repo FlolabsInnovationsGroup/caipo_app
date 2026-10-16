@@ -19,7 +19,14 @@ class AuthRepository {
 
   Future<void> signOut() async {
     try {
-      await _api.send('POST', '/api/auth/signout/');
+      final tokens = await _api.tokenStore.read();
+      await _api.send(
+        'POST',
+        '/api/auth/signout/',
+        data: {
+          if (tokens != null) kRefreshTokenJsonField: tokens.refreshToken,
+        },
+      );
     } finally {
       await _api.tokenStore.clear();
     }

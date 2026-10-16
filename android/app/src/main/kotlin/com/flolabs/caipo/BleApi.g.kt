@@ -343,6 +343,14 @@ interface BleHostApi {
   fun getBluetoothState(): String
   suspend fun enableBluetooth(): Boolean
   fun isPeripheralConnected(uuid: String): Boolean
+  /**
+   * Largest with-response write, in bytes.
+   *
+   * iOS returns `maximumWriteValueLength(for: .withResponse)`. Android
+   * returns the negotiated ATT payload (`mtu - 3`). The app does not ask
+   * iOS for an MTU.
+   */
+  suspend fun maximumWriteLength(peripheralUuid: String): Long
   fun startRssiStreaming(uuid: String)
   fun stopRssiStreaming(uuid: String)
   /**
@@ -581,6 +589,25 @@ interface BleHostApi {
               BleApiPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.caipo_app.BleHostApi.maximumWriteLength$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val peripheralUuidArg = args[0] as String
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.maximumWriteLength(peripheralUuidArg))
+              } catch (exception: Throwable) {
+                BleApiPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
           }
         } else {
           channel.setMessageHandler(null)

@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../core/config/constants.dart';
 import '../core/errors/app_exception.dart';
 import '../core/logging/app_logger.dart';
+import 'mock_flobrain_interceptor.dart';
 import 'secure_token_store.dart';
 import 'token_store.dart';
 
@@ -15,12 +16,13 @@ class FloBrainApi {
     required AppLogger logger,
     Dio? dio,
     this.maxAttempts = kHttpMaxAttempts,
+    this.mockBackend = false,
   }) : tokenStore = tokenStore,
        logger = logger,
        dio = dio ??
            Dio(
              BaseOptions(
-               baseUrl: kFloBrainBaseUrl,
+               baseUrl: mockBackend ? 'http://mock.flobrain.local' : kFloBrainBaseUrl,
                connectTimeout: const Duration(seconds: kHttpTimeoutSeconds),
                receiveTimeout: const Duration(seconds: kHttpTimeoutSeconds),
                headers: const {'Accept': 'application/json'},
@@ -28,7 +30,12 @@ class FloBrainApi {
            ) {
     this.dio.options.validateStatus = (status) => status != null && status < 600;
     this.dio.interceptors.add(JwtInterceptor(tokenStore: tokenStore, dio: this.dio, logger: logger));
+    if (mockBackend) {
+      this.dio.interceptors.add(MockFloBrainInterceptor());
+    }
   }
+
+  final bool mockBackend;
 
   final TokenStore tokenStore;
   final AppLogger logger;
@@ -140,7 +147,7 @@ class JwtInterceptor extends Interceptor {
     if (authenticated && options.extra['skipAuth'] != true) {
       final tokens = await tokenStore.read();
       if (tokens != null && tokens.accessToken.isNotEmpty) {
-        options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+        options.headers['Authorization'] = '$kAuthorizationPrefix ${tokens.accessToken}';
       }
     }
     handler.next(options);
@@ -169,7 +176,7 @@ class JwtInterceptor extends Interceptor {
       }
       final request = response.requestOptions;
       request.extra['retried'] = true;
-      request.headers['Authorization'] = 'Bearer ${refreshed.accessToken}';
+      request.headers['Authorization'] = '$kAuthorizationPrefix ${refreshed.accessToken}';
       final replay = await dio.fetch<dynamic>(request);
       handler.resolve(replay);
     } catch (error, stack) {

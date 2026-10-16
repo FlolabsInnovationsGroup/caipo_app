@@ -13,7 +13,13 @@ class SecureTokenStore implements TokenStore {
   final SecureStoreHostApi _api;
 
   @override
-  Future<void> clear() => _api.deleteAll();
+  Future<void> clear() async {
+    await _api.delete(_accessKey);
+    await _api.delete(_refreshKey);
+  }
+
+  /// Wipes every secret in the store, including history and media keys.
+  Future<void> deleteAll() => _api.deleteAll();
 
   @override
   Future<TokenPair?> read() async {

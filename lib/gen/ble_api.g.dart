@@ -491,6 +491,30 @@ class BleHostApi {
     return pigeonVar_replyValue! as bool;
   }
 
+  /// Largest with-response write, in bytes.
+  ///
+  /// iOS returns `maximumWriteValueLength(for: .withResponse)`. Android
+  /// returns the negotiated ATT payload (`mtu - 3`). The app does not ask
+  /// iOS for an MTU.
+  Future<int> maximumWriteLength(String peripheralUuid) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.caipo_app.BleHostApi.maximumWriteLength$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[peripheralUuid]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as int;
+  }
+
   Future<void> startRssiStreaming(String uuid) async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.caipo_app.BleHostApi.startRssiStreaming$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(

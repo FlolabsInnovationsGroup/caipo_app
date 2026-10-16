@@ -47,6 +47,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>CAIPO uses Face ID to unlock the app when biometric unlock is on.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>CAIPO uses the local network to show the camera. This is asked when you open Live view.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>CAIPO uses Bluetooth to find your device and keep the connection alive.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>

@@ -9,7 +9,8 @@ class TransferTooLarge implements Exception {
 
   @override
   String toString() =>
-      'Transfer is $size bytes. The specified maximum is $kMaxTransferBytes.';
+      'Transfer is $size bytes. The testing maximum is $kMaxTransferBytes '
+      'and the uint16 sequence space addresses $kSequenceAddressableBytes.';
 }
 
 class TransferChunk {
@@ -18,7 +19,7 @@ class TransferChunk {
   /// Zero-based, matching the sequence numbers in spec section 6.1.
   final int sequence;
 
-  /// At most [kMaxChunkBytes]. The on-wire encoding of [sequence] is TBD.
+  /// At most [kMaxChunkBytes]. The on-wire CHUNK header is added by the encoder.
   final Uint8List payload;
 }
 
@@ -28,7 +29,7 @@ class Chunker {
   final int maxChunkBytes;
 
   List<TransferChunk> split(Uint8List data) {
-    if (data.length > kMaxTransferBytes) {
+    if (data.length > kMaxTransferBytes || data.length > kSequenceAddressableBytes) {
       throw TransferTooLarge(data.length);
     }
     if (data.isEmpty || maxChunkBytes <= 0) return const [];

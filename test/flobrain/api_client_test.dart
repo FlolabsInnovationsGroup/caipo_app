@@ -7,7 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('attaches the bearer token and refreshes once on 401', () async {
+  test('attaches the Token scheme and refreshes once on 401', () async {
     final store = MemoryTokenStore();
     await store.write(const TokenPair(accessToken: 'old-access', refreshToken: 'refresh-1'));
     final adapter = _ScriptedAdapter([
@@ -24,7 +24,7 @@ void main() {
     final response = await api.send('GET', '/api/profile/');
 
     expect(response.statusCode, 200);
-    expect(adapter.authorizations, ['Bearer old-access', 'Bearer new-access']);
+    expect(adapter.authorizations, ['Token old-access', 'Token new-access']);
     expect((await store.read())!.accessToken, 'new-access');
     expect(adapter.refreshBodies.single, contains('refresh-1'));
   });

@@ -50,6 +50,10 @@ final class BleHostApiImpl: BleHostApi {
 
     func unmanageDevice(uuid: String) throws { manager.disconnect(uuid: uuid) }
 
+    /// iOS cannot start SMP bonding. The firmware requires encryption on the
+    /// characteristics, and CoreBluetooth shows the pairing dialog on the
+    /// first access. Returning true keeps Dart from treating the missing API
+    /// as a bond failure.
     func requestBond(uuid: String) async throws -> Bool { true }
 
     func readCharacteristic(peripheralUuid: String, serviceUuid: String, characteristicUuid: String) async throws -> FlutterStandardTypedData {
@@ -85,6 +89,10 @@ final class BleHostApiImpl: BleHostApi {
     func enableBluetooth() async throws -> Bool { manager.bluetoothState() == "on" }
 
     func isPeripheralConnected(uuid: String) throws -> Bool { manager.isConnected(uuid: uuid) }
+
+    func maximumWriteLength(peripheralUuid: String) async throws -> Int64 {
+        Int64(manager.maximumWriteLength(uuid: peripheralUuid))
+    }
 
     func startRssiStreaming(uuid: String) throws { manager.startRssi(uuid: uuid) }
 

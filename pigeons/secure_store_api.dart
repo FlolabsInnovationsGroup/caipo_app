@@ -9,9 +9,9 @@ import 'package:pigeon/pigeon.dart';
     dartOut: 'lib/gen/secure_store_api.g.dart',
     dartOptions: DartOptions(),
     swiftOut: 'ios/Runner/SecureStoreApi.g.swift',
-    swiftOptions: SwiftOptions(),
+    swiftOptions: SwiftOptions(includeErrorClass: false),
     kotlinOut: 'android/app/src/main/kotlin/com/flolabs/caipo/SecureStoreApi.g.kt',
-    kotlinOptions: KotlinOptions(package: 'com.flolabs.caipo'),
+    kotlinOptions: KotlinOptions(package: 'com.flolabs.caipo', includeErrorClass: false),
   ),
 )
 @HostApi()

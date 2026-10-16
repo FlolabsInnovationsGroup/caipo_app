@@ -26,3 +26,7 @@ class SessionLockedException extends AppException {
   const SessionLockedException()
       : super('Session locked after a period of inactivity.');
 }
+
+class SpeechUnavailable extends AppException {
+  const SpeechUnavailable(super.message);
+}

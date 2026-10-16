@@ -1,7 +1,10 @@
 import '../../core/config/constants.dart';
 
-/// Codec byte map from spec section 4.4, which follows OMI's shipping switch
-/// and not OMI's published protocol document.
+/// Codec byte on the read characteristic.
+///
+/// CAIPO recordings and AI replies are Opus 16 kHz, codec 21. Bytes 1 and 20
+/// are recognised and are not the recording format. Any other byte is
+/// unsupported.
 enum NegotiatedCodec {
   pcm8kHz(id: kCodecPcm8kHz, sampleRateHz: 8000, frameSamples: null),
   opus8kHz(id: kCodecOpus8kHz, sampleRateHz: 8000, frameSamples: 160),
@@ -25,8 +28,8 @@ enum NegotiatedCodec {
 class CodecNegotiation {
   const CodecNegotiation();
 
-  /// Anything other than 1, 20 or 21 falls through to PCM 8 kHz.
-  NegotiatedCodec fromByte(int codecByte) {
+  /// Null when the byte is not 1, 20 or 21.
+  NegotiatedCodec? fromByte(int codecByte) {
     switch (codecByte) {
       case kCodecPcm8kHz:
         return NegotiatedCodec.pcm8kHz;
@@ -35,14 +38,14 @@ class CodecNegotiation {
       case kCodecOpus16kHz:
         return NegotiatedCodec.opus16kHz;
       default:
-        return NegotiatedCodec.pcm8kHz;
+        return null;
     }
   }
 
-  /// Reads the first byte of the codec characteristic. An empty read falls
-  /// through to PCM 8 kHz, matching OMI's shipping behaviour.
-  NegotiatedCodec fromCharacteristic(List<int> bytes) {
-    if (bytes.isEmpty) return NegotiatedCodec.pcm8kHz;
+  /// Reads the first byte of the codec characteristic. An empty read is
+  /// unsupported.
+  NegotiatedCodec? fromCharacteristic(List<int> bytes) {
+    if (bytes.isEmpty) return null;
     return fromByte(bytes.first);
   }
 

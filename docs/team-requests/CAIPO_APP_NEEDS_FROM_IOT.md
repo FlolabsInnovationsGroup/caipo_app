@@ -78,7 +78,7 @@ Please answer here (edit this file in a PR, or reply on the Notion task and the 
 | # | Question | Answer | Who | Date |
 | --- | --- | --- | --- | --- |
 | 1 | Who runs the first BLE test with the app, and when? | | | |
-| 1 | When do Mohamed get a board and Sosina's handover document? | | | |
+| 1 | When does Mohamed get a board and Sosina's handover document? | | | |
 | 2 | Does the camera send JPEG or PNG, at what size, over R03 type 0x02? | | | |
 | 3 | Gesture events: opcode and id for single, double, long press, and what each does | | | |
 | 3 | LED: does the app send LED commands, or only show device state? | | | |

@@ -1,4 +1,3 @@
-import 'dart:ffi' show DynamicLibrary;
 import 'dart:typed_data';
 
 import 'package:opus_dart/opus_dart.dart';
@@ -30,7 +29,9 @@ class OpusCodec {
 
   /// Uses an already opened libopus. opus_flutter ships no Linux build, so
   /// tests on a Linux CI machine pass the system library here.
-  static void useLibrary(DynamicLibrary library) {
+  // opus_dart types this through its own ffi proxy, so the library is passed
+  // untyped, the same way opus_flutter.load() hands it over.
+  static void useLibrary(dynamic library) {
     initOpus(library);
     _loading = Future<void>.value();
   }

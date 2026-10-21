@@ -27,6 +27,13 @@ class OpusCodec {
     initOpus(await opus_flutter.load());
   }
 
+  /// Uses an already opened libopus. opus_flutter ships no Linux build, so
+  /// tests on a Linux CI machine pass the system library here.
+  static void useLibrary(Object library) {
+    initOpus(library);
+    _loading = Future<void>.value();
+  }
+
   Uint8List encodeWav(Uint8List wav) => encodeSamples(toMono16k(parseWav(wav)));
 
   Uint8List encodeSamples(Int16List samples) {

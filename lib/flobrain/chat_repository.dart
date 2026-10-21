@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../core/config/constants.dart';
 import 'api_client.dart';
 
@@ -24,8 +25,10 @@ class ChatRepository {
     await _api.send('DELETE', '/api/brain/chats/$chatId/');
   }
 
-  Future<Map<String, dynamic>> send(String chatId, Map<String, dynamic> message) async {
-    return _object(await _api.send('POST', '/api/brain/chats/$chatId/send/', data: message));
+  Future<Map<String, dynamic>> send(String chatId, Map<String, dynamic> message, {CancelToken? cancelToken}) async {
+    return _object(
+      await _api.send('POST', '/api/brain/chats/$chatId/send/', data: message, cancelToken: cancelToken),
+    );
   }
 
   /// The assistant's answer in a send response: the text of the last message whose

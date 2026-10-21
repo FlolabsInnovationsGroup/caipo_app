@@ -20,6 +20,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter --version
+      # opus_flutter has no Linux build; the Opus tests use the system libopus.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq libopus0
       - run: flutter pub get
       # Each analyzer finding becomes an annotation on the file and line.
       - name: flutter analyze

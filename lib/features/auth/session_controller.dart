@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,11 +18,16 @@ class SessionController extends ChangeNotifier with WidgetsBindingObserver {
 
   static const lastActivityKey = 'caipo.last_activity';
 
+  /// How often an open app checks the auto-lock limit.
+  static const idleCheckInterval = Duration(seconds: 30);
+
   final AuthRepository auth;
   final SettingsRepository settings;
   final SharedPreferences preferences;
   final AppLogger logger;
   final DateTime Function() _clock;
+
+  Timer? _idleTimer;
 
   bool ready = false;
   bool signedIn = false;
@@ -75,19 +82,29 @@ class SessionController extends ChangeNotifier with WidgetsBindingObserver {
 
   void start() {
     WidgetsBinding.instance.addObserver(this);
+    _idleTimer?.cancel();
+    _idleTimer = Timer.periodic(idleCheckInterval, (_) => checkIdle());
   }
 
   void stop() {
     WidgetsBinding.instance.removeObserver(this);
+    _idleTimer?.cancel();
+    _idleTimer = null;
+  }
+
+  /// Locks a signed-in session after the auto-lock limit with no touches,
+  /// including while the app stays open on screen.
+  void checkIdle() {
+    if (signedIn && !locked && _inactiveTooLong()) {
+      locked = true;
+      notifyListeners();
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (signedIn && _inactiveTooLong()) {
-        locked = true;
-        notifyListeners();
-      }
+      checkIdle();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       noteActivity();
     }

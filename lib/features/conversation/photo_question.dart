@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/foundation.dart';
 
 import '../../core/config/constants.dart';
@@ -35,6 +36,7 @@ class PhotoQuestionController extends ChangeNotifier {
   String? alert;
   String? _chatId;
   var _generation = 0;
+  CancelToken? _request;
 
   static const blockedMessage =
       'FloBrain does not read photos yet. Its answer would ignore the picture, so photo questions are off.';
@@ -88,10 +90,13 @@ class PhotoQuestionController extends ChangeNotifier {
     notifyListeners();
     try {
       final chatId = await _chat();
-      final sent = await chats.send(chatId, {
-        kChatTextField: text,
-        kChatImageField: dataUrl(photo, mime),
-      });
+      final request = CancelToken();
+      _request = request;
+      final sent = await chats.send(
+        chatId,
+        {kChatTextField: text, kChatImageField: dataUrl(photo, mime)},
+        cancelToken: request,
+      );
       if (generation != _generation) return;
       final answer = ChatRepository.replyFrom(sent);
       if (answer.isEmpty) throw const AppException('FloBrain returned no reply.');
@@ -108,16 +113,20 @@ class PhotoQuestionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Stops waiting for the answer. FloBrain may still finish the request.
+  /// Aborts the request. FloBrain may still have received it.
   void cancel() {
     if (phase != PhotoQuestionPhase.sending) return;
     _generation++;
+    _request?.cancel();
+    _request = null;
     phase = PhotoQuestionPhase.idle;
     notifyListeners();
   }
 
   void reset() {
     _generation++;
+    _request?.cancel();
+    _request = null;
     _chatId = null;
     reply = null;
     alert = null;

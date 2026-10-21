@@ -67,6 +67,31 @@ void main() {
     expect(showBiometricUnlock(locked: session.locked, enabled: settings.biometricUnlock()), isFalse);
   });
 
+  test('an open app locks after the auto-lock limit with no touches', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final api = FloBrainApi(tokenStore: MemoryTokenStore(), logger: const AppLogger(), mockBackend: true);
+    final settings = SettingsRepository(api, prefs);
+    var now = DateTime.utc(2026, 10, 22, 9);
+    final session = SessionController(
+      auth: AuthRepository(api),
+      settings: settings,
+      preferences: prefs,
+      logger: const AppLogger(),
+      clock: () => now,
+    );
+    await session.signIn('ada@example.com', 'secret');
+
+    now = now.add(Duration(minutes: settings.autoLockMinutes() - 1));
+    session.checkIdle();
+    expect(session.locked, isFalse);
+
+    await session.noteActivity();
+    now = now.add(Duration(minutes: settings.autoLockMinutes()));
+    session.checkIdle();
+    expect(session.locked, isTrue);
+  });
+
   test('export is the conversation and not the Wi-Fi password', () async {
     final secrets = SecretStore.memory();
     final directory = Directory.systemTemp.createTempSync('caipo-export');

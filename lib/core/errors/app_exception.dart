@@ -30,3 +30,8 @@ class SessionLockedException extends AppException {
 class SpeechUnavailable extends AppException {
   const SpeechUnavailable(super.message);
 }
+
+/// The user cancelled the request. Not shown as an error.
+class RequestCancelled extends AppException {
+  const RequestCancelled() : super('Cancelled.');
+}

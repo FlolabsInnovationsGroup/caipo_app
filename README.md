@@ -31,7 +31,7 @@ flutter run -d ios
 
 Android minimum is API 29 (Android 10). The app asks for `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` on Android 12+, and location on Android 10–11 because scanning required it there. A connected-device foreground service keeps the BLE link while the app is backgrounded. iOS uses the `bluetooth-central` background mode and CoreBluetooth state restoration (`com.flolabs.caipo.ble`).
 
-This tree was built on Windows. `flutter test` and `flutter analyze` can run here. An iOS compile needs a Mac. An Android device or emulator with Bluetooth is required to exercise a real scan; the unit tests do not need hardware.
+This tree was built on Windows. `flutter test` and `flutter analyze` run locally and in GitHub Actions on every push. An iOS compile needs a Mac. An Android device or emulator with Bluetooth is required to exercise a real scan; the unit tests do not need hardware.
 
 ## What is implemented
 
@@ -45,16 +45,15 @@ This tree was built on Windows. `flutter test` and `flutter analyze` can run her
 - Opus frame container for content type 0x01. Real-time audio streaming is disabled.
 - Heartbeat parsing. The 3 second silence rule is implemented and off until the firmware sends heartbeats.
 
-## What is mocked
+## What is mocked or off
 
-- `OpusEncoder` returns no PCM-to-Opus bytes. Reply audio has to arrive as Opus frames.
-- `OpusDecoder` returns no PCM.
-- `SttClient` and `TtsClient` return nothing. Those endpoints are not published.
-- Wi-Fi provisioning and the media channel do not send credentials or open a socket.
+- Live speech: FloBrain publishes no speech-to-text or text-to-speech, so the live voice loop stops with "not available". The full loop runs with `BACKEND_MODE=mock`.
+- Photo questions are off on live builds: FloBrain stores the chat image but does not pass it to the model yet. `--dart-define=FLOBRAIN_VISION=true` turns them on once it does.
+- Wi-Fi provisioning, device commands, the media channel and the camera stream are proposals behind `PROPOSED_*` flags, all off.
 
-## What is not built
+## Not done
 
-Phase 2 Opus-to-PCM decode, storing or uploading a received recording, non-transfer command bytes other than the heartbeat, Phase 5 dashboard / media library / notifications / settings / diagnostics screens, Phase 6 Wi-Fi, live view and camera. The ESP32-S3 firmware BLE layer is still being written, so this build cannot be tested against a device.
+Running against a real CAIPO: the ESP32-S3 BLE layer has not run on hardware yet. Video playback. An iOS build (needs a Mac). Full detail is in `docs/STATUS.md`.
 
 ## Tests
 
@@ -62,4 +61,4 @@ Phase 2 Opus-to-PCM decode, storing or uploading a received recording, non-trans
 flutter test
 ```
 
-Covers the BLE identity, R03 wire format, transfer exchange, Opus frame container, codec negotiation, chunker and checksum, plus the JWT refresh path and pairing-failure messages.
+Covers the BLE identity, R03 wire format, transfer exchange, Opus round trip, codec negotiation, chunker and checksum, the voice loop on sim + mock, the FloBrain auth and chat shapes, photo questions, encryption, export and delete-all, auto-lock, and pairing-failure messages.

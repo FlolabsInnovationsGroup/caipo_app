@@ -5,6 +5,7 @@ import '../../core/config/app_paths.dart';
 import '../../core/security/at_rest.dart';
 import '../../core/security/secret_store.dart';
 import '../../device/wifi/wifi_networks.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../conversation/history_store.dart';
 
 /// Export and full local deletion. Tokens and Wi-Fi passwords are not exported.
@@ -24,11 +25,16 @@ class LocalData {
     required ConversationHistoryStore history,
     required SecretStore secrets,
     required WifiNetworkStore wifi,
+    SharedPreferences? preferences,
   }) async {
     await history.clear();
     await _empty(paths.history);
     await _empty(paths.transfers);
     await _empty(paths.replies);
+    final playback = paths.playback;
+    if (playback != null) await _empty(playback);
+    // Settings, paired devices, onboarding and notices live here.
+    await preferences?.clear();
     await secrets.delete(AtRestCipher.historyKeyName);
     await secrets.delete(AtRestCipher.mediaKeyName);
     await wifi.write('[]');
@@ -49,6 +55,7 @@ class PrivacyActions {
     required this.paths,
     required this.wifi,
     required this.wipeStore,
+    this.preferences,
   });
 
   final ConversationHistoryStore history;
@@ -58,11 +65,18 @@ class PrivacyActions {
 
   /// Production passes the secure-store wipe, which removes tokens as well as any leftover keys.
   final Future<void> Function() wipeStore;
+  final SharedPreferences? preferences;
 
   Future<String> export() => const LocalData().exportJson(history);
 
   Future<void> deleteAll() async {
-    await const LocalData().deleteAll(paths: paths, history: history, secrets: secrets, wifi: wifi);
+    await const LocalData().deleteAll(
+      paths: paths,
+      history: history,
+      secrets: secrets,
+      wifi: wifi,
+      preferences: preferences,
+    );
     await wipeStore();
   }
 }

@@ -1,0 +1,50 @@
+name: apk
+
+# Builds installable Android APKs and publishes them on one GitHub release,
+# replaced on every push to main. Debug-key signed: for internal testing only.
+on:
+  push:
+    branches: [main]
+    paths: ['lib/**', 'android/**', 'assets/**', 'pubspec.yaml', 'pubspec.lock', '.github/workflows/apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: build sim + mock
+        run: |
+          flutter build apk --release --dart-define=DEVICE_MODE=sim --dart-define=BACKEND_MODE=mock
+          cp build/app/outputs/flutter-apk/app-release.apk caipo-sim-mock.apk
+      - name: build ble + live
+        run: |
+          flutter build apk --release --dart-define=DEVICE_MODE=ble --dart-define=BACKEND_MODE=live
+          cp build/app/outputs/flutter-apk/app-release.apk caipo-ble-live.apk
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-latest --yes --cleanup-tag || true
+          gh release create android-latest caipo-sim-mock.apk caipo-ble-live.apk \
+            --title "CAIPO Android (latest main)" --prerelease --target "$GITHUB_SHA" \
+            --notes "Built from ${GITHUB_SHA::7}. Debug-key signed, internal testing only.
+          caipo-sim-mock.apk: no device and no server needed. Sign in with any email and password, pair CAIPO-SIM.
+          caipo-ble-live.apk: real CAIPO over Bluetooth and api.flobrain.ai."

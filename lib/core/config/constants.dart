@@ -10,10 +10,12 @@ library;
 
 const String kFloBrainBaseUrl = 'https://api.flobrain.ai';
 
-/// OpenAPI security scheme `tokenAuth`, fetched read-only from
-/// `http://api.flobrain.ai/api/schema/` on 16 Oct 2026. No credentials were sent.
-/// The scheme description requires this prefix. Authenticated calls stay on HTTPS.
-const String kAuthorizationPrefix = 'Token';
+/// FloBrain's profile, chat and settings views read `Authorization: Bearer <jwt>`
+/// (backend `users/authentication.py` and `users/jwt_utils.py`, checked on 21 Oct
+/// 2026). The OpenAPI `tokenAuth` entry comes from DRF's default
+/// TokenAuthentication class, which these views do not use. Authenticated calls
+/// stay on HTTPS.
+const String kAuthorizationPrefix = 'Bearer';
 
 /// Shown on Settings > About. Keep this aligned with `pubspec.yaml`.
 const String kAppVersionName = '1.0.0';
@@ -26,10 +28,29 @@ const String kBleContractVersion = 'GATT A1000000–A1000004, heartbeat 0x10, R0
 const String kApiErrorField = 'error';
 const String kApiDetailsField = 'details';
 
-/// The 16 Oct 2026 schema lists the auth routes and does not define the
-/// sign-in JSON properties. These names stay fail-closed placeholders.
-const String kAccessTokenJsonField = 'access';
-const String kRefreshTokenJsonField = 'refresh';
+/// Sign-in and register answer `{"access_token", "refresh_token", "userId"}`
+/// (backend `users/views.py`, checked on 21 Oct 2026). A body without both
+/// tokens still fails closed.
+const String kAccessTokenJsonField = 'access_token';
+const String kRefreshTokenJsonField = 'refresh_token';
+
+/// `POST /api/auth/refresh/` takes `{"refresh": ...}` and answers
+/// `{"access": ...}` only. The app keeps the refresh token it already has.
+const String kRefreshRequestField = 'refresh';
+const String kRefreshResponseAccessField = 'access';
+
+/// `POST /api/auth/signout/` reads `refresh_token`.
+const String kSignOutRefreshField = 'refresh_token';
+
+/// `POST /api/brain/chats/{id}/send/` takes `text` and an optional `image`
+/// (base64 or URL) and answers the whole chat: `id`, `title`, `timestamp`,
+/// `messages` (`id`, `role`, `text`, ...) and `usage`. The reply is the last
+/// message whose role is `assistant`.
+const String kChatTextField = 'text';
+const String kChatImageField = 'image';
+const String kChatMessagesField = 'messages';
+const String kChatRoleField = 'role';
+const String kChatAssistantRole = 'assistant';
 
 /// Named in the schema descriptions for profile and sign-in.
 const String kEmailJsonField = 'email';

@@ -1,3 +1,4 @@
+import '../core/config/constants.dart';
 import 'api_client.dart';
 
 class ChatRepository {
@@ -25,6 +26,20 @@ class ChatRepository {
 
   Future<Map<String, dynamic>> send(String chatId, Map<String, dynamic> message) async {
     return _object(await _api.send('POST', '/api/brain/chats/$chatId/send/', data: message));
+  }
+
+  /// The assistant's answer in a send response: the text of the last message whose
+  /// role is `assistant`. Empty when the body has no such message (live mode then
+  /// fails closed instead of inventing a reply).
+  static String replyFrom(Map<String, dynamic> sent) {
+    final messages = sent[kChatMessagesField];
+    if (messages is! List) return '';
+    for (final message in messages.reversed) {
+      if (message is Map && message[kChatRoleField] == kChatAssistantRole) {
+        return '${message[kChatTextField] ?? ''}'.trim();
+      }
+    }
+    return '';
   }
 
   Map<String, dynamic> _object(dynamic response) {

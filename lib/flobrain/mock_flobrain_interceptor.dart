@@ -4,8 +4,10 @@ import '../core/config/constants.dart';
 
 /// In-process FloBrain. It never opens a socket.
 ///
-/// Field names match the placeholders the app already sends. They are not a
-/// claim about the live API. Live mode does not use this class.
+/// Request and response shapes follow FloBrain's backend code (`users/views.py`,
+/// `brain/views.py`, `brain/serializers.py`, checked on 21 Oct 2026), so tests
+/// exercise the real contract. The speech routes are the proposed ones, which
+/// FloBrain does not publish yet. Live mode does not use this class.
 class MockFloBrainInterceptor extends Interceptor {
   final Map<String, _Account> _accounts = {};
   final Map<String, List<Map<String, dynamic>>> _chats = {};
@@ -36,18 +38,24 @@ class MockFloBrainInterceptor extends Interceptor {
     }
 
     if (method == 'POST' && path.endsWith('/api/auth/refresh/')) {
-      final refresh = '${body[kRefreshTokenJsonField] ?? ''}';
+      final refresh = '${body[kRefreshRequestField] ?? ''}';
       final account = _byRefresh(refresh);
       if (account == null) {
-        handler.resolve(_json(options, 401, {'error': 'Refresh token was not recognised.', 'details': ''}));
+        handler.resolve(_json(options, 401, {'error': 'Invalid or expired refresh token'}));
         return;
       }
-      handler.resolve(_json(options, 200, _tokens(account)));
+      _tokens(account);
+      // FloBrain answers with a new access token only.
+      handler.resolve(_json(options, 200, {kRefreshResponseAccessField: account.access}));
       return;
     }
 
     if (method == 'POST' && path.endsWith('/api/auth/signout/')) {
-      handler.resolve(_json(options, 200, {'ok': true}));
+      if ('${body[kSignOutRefreshField] ?? ''}'.isEmpty) {
+        handler.resolve(_json(options, 400, {'error': 'refresh_token is required'}));
+        return;
+      }
+      handler.resolve(_json(options, 200, {'message': 'Signed out'}));
       return;
     }
 
@@ -56,12 +64,12 @@ class MockFloBrainInterceptor extends Interceptor {
       return;
     }
 
-    if (method == 'POST' && path.endsWith('/api/speech/stt/')) {
+    if (method == 'POST' && path.endsWith('/api/speech/transcribe/')) {
       handler.resolve(_json(options, 200, {'text': cannedTranscript}));
       return;
     }
 
-    if (method == 'POST' && path.endsWith('/api/speech/tts/')) {
+    if (method == 'POST' && path.endsWith('/api/speech/synthesize/')) {
       handler.resolve(_json(options, 200, {'audio': <int>[], 'text': '${body['text'] ?? ''}'}));
       return;
     }
@@ -80,24 +88,24 @@ class MockFloBrainInterceptor extends Interceptor {
     if (method == 'POST' && path.contains('/api/brain/chats/') && path.endsWith('/send/')) {
       final id = _chatId(path);
       final history = _chats.putIfAbsent(id, () => []);
-      final text = '${body['text'] ?? body['message'] ?? ''}';
-      history.add({'role': 'user', 'text': text});
-      final reply = '$cannedReply You said: $text';
-      history.add({'role': 'assistant', 'text': reply});
-      handler.resolve(
-        _json(options, 200, {
-          'id': id,
-          'reply': reply,
-          'messages': history,
-        }),
-      );
+      final text = '${body[kChatTextField] ?? ''}'.trim();
+      final image = '${body[kChatImageField] ?? ''}';
+      if (text.isEmpty && image.isEmpty) {
+        handler.resolve(_json(options, 400, {'error': 'Validation failed', 'details': 'text or image required'}));
+        return;
+      }
+      history.add(_message(history.length + 1, 'user', text, image: image));
+      final seen = image.isEmpty ? '' : ' I looked at the picture you sent.';
+      final reply = '$cannedReply You said: $text$seen';
+      history.add(_message(history.length + 1, kChatAssistantRole, reply));
+      handler.resolve(_json(options, 200, _chatDetail(id, history)));
       return;
     }
 
     if (method == 'POST' && path.endsWith('/api/brain/chats/')) {
       final id = '${_nextId++}';
       _chats[id] = [];
-      handler.resolve(_json(options, 201, {'id': id}));
+      handler.resolve(_json(options, 201, _chatDetail(id, _chats[id]!)));
       return;
     }
 
@@ -123,7 +131,31 @@ class MockFloBrainInterceptor extends Interceptor {
     account.generation += 1;
     account.access = 'mock-access-${account.email}-${account.generation}';
     account.refresh = 'mock-refresh-${account.email}';
-    return {kAccessTokenJsonField: account.access, kRefreshTokenJsonField: account.refresh};
+    return {
+      kAccessTokenJsonField: account.access,
+      kRefreshTokenJsonField: account.refresh,
+      'userId': 'mock-user-${account.email}',
+    };
+  }
+
+  Map<String, dynamic> _message(int id, String role, String text, {String image = ''}) {
+    return {
+      'id': '$id',
+      kChatRoleField: role,
+      kChatTextField: text,
+      kChatImageField: image.isEmpty ? null : image,
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+    };
+  }
+
+  Map<String, dynamic> _chatDetail(String id, List<Map<String, dynamic>> messages) {
+    return {
+      'id': int.tryParse(id) ?? id,
+      'title': 'CAIPO',
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+      kChatMessagesField: messages,
+      'usage': null,
+    };
   }
 
   _Account? _byAccess(String token) {

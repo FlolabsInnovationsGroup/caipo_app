@@ -7,12 +7,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('attaches the Token scheme and refreshes once on 401', () async {
+  test('attaches the Bearer scheme and refreshes once on 401', () async {
     final store = MemoryTokenStore();
     await store.write(const TokenPair(accessToken: 'old-access', refreshToken: 'refresh-1'));
     final adapter = _ScriptedAdapter([
       _Script(status: 401, body: '{"error":"expired"}'),
-      _Script(status: 200, body: '{"access":"new-access","refresh":"refresh-2"}', matchPath: '/api/auth/refresh/'),
+      // FloBrain's refresh answers with a new access token only.
+      _Script(status: 200, body: '{"access":"new-access"}', matchPath: '/api/auth/refresh/'),
       _Script(status: 200, body: '{"ok":true}'),
     ]);
     final api = FloBrainApi(
@@ -24,9 +25,10 @@ void main() {
     final response = await api.send('GET', '/api/profile/');
 
     expect(response.statusCode, 200);
-    expect(adapter.authorizations, ['Token old-access', 'Token new-access']);
+    expect(adapter.authorizations, ['Bearer old-access', 'Bearer new-access']);
     expect((await store.read())!.accessToken, 'new-access');
-    expect(adapter.refreshBodies.single, contains('refresh-1'));
+    expect((await store.read())!.refreshToken, 'refresh-1', reason: 'the refresh token is kept');
+    expect(adapter.refreshBodies.single, contains('refresh: refresh-1'));
   });
 
   test('retries a 500 and then surfaces the documented error', () async {

@@ -38,7 +38,7 @@ class SecureTokenStore implements TokenStore {
   }
 }
 
-/// Reads the placeholder JSON field names and fails closed otherwise.
+/// Reads the sign-in token fields and fails closed when either is missing.
 TokenPair? tokenPairFromJson(Map<String, dynamic> json) {
   final access = json[kAccessTokenJsonField];
   final refresh = json[kRefreshTokenJsonField];

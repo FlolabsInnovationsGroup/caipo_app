@@ -12,7 +12,7 @@ flutter run --dart-define=DEVICE_MODE=sim --dart-define=BACKEND_MODE=mock
 
 ## Setup
 
-Install Flutter 3.27 or newer (this tree was generated with 3.47.7) and an Android SDK with API 29+. iOS builds require Xcode on macOS and target iOS 15.
+Install Flutter 3.47 or newer (the lock file requires it; this tree was generated with 3.47.7) and an Android SDK with API 29+. iOS builds require Xcode on macOS and target iOS 15.
 
 ```bash
 flutter pub get

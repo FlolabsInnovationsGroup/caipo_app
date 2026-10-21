@@ -192,7 +192,7 @@ class JwtInterceptor extends Interceptor {
     if (current == null) return null;
     final response = await dio.post<dynamic>(
       '/api/auth/refresh/',
-      data: {kRefreshTokenJsonField: current.refreshToken},
+      data: {kRefreshRequestField: current.refreshToken},
       options: Options(
         extra: const {'skipAuth': true, 'authenticated': false},
         validateStatus: (status) => status != null && status < 600,
@@ -208,16 +208,19 @@ class JwtInterceptor extends Interceptor {
     if (body is! Map) {
       throw const ApiException('Refresh response was not an object.', statusCode: 200);
     }
-    final parsed = tokenPairFromJson(Map<String, dynamic>.from(body));
-    if (parsed == null) {
+    final access = body[kRefreshResponseAccessField];
+    if (access is! String || access.isEmpty) {
       throw const ApiException(
-        'Refresh response did not include the expected token fields.',
+        'Refresh response did not include the access token.',
         statusCode: 200,
       );
     }
+    // FloBrain answers with a new access token only. Keep the refresh token we have,
+    // unless a rotated one is present.
+    final rotated = body[kRefreshRequestField] ?? body[kRefreshTokenJsonField];
     final merged = TokenPair(
-      accessToken: parsed.accessToken,
-      refreshToken: parsed.refreshToken.isEmpty ? current.refreshToken : parsed.refreshToken,
+      accessToken: access,
+      refreshToken: rotated is String && rotated.isNotEmpty ? rotated : current.refreshToken,
     );
     await tokenStore.write(merged);
     return merged;

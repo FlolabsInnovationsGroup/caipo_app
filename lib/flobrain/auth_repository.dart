@@ -20,12 +20,12 @@ class AuthRepository {
   Future<void> signOut() async {
     try {
       final tokens = await _api.tokenStore.read();
+      // Nothing to revoke without a refresh token; FloBrain would answer 400.
+      if (tokens == null) return;
       await _api.send(
         'POST',
         '/api/auth/signout/',
-        data: {
-          if (tokens != null) kRefreshTokenJsonField: tokens.refreshToken,
-        },
+        data: {kSignOutRefreshField: tokens.refreshToken},
       );
     } finally {
       await _api.tokenStore.clear();

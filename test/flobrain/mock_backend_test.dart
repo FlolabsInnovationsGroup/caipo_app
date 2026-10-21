@@ -21,11 +21,11 @@ void main() {
 
     final created = await chat.create({'title': 'First'});
     final sent = await chat.send('${created['id']}', {'text': 'hello'});
-    expect(sent['reply'], contains(MockFloBrainInterceptor.cannedReply));
-    expect(sent['reply'], contains('hello'));
+    expect(ChatRepository.replyFrom(sent), contains(MockFloBrainInterceptor.cannedReply));
+    expect(ChatRepository.replyFrom(sent), contains('hello'));
     expect((sent['messages'] as List), hasLength(2));
 
-    final speech = await api.send('POST', '/api/speech/stt/', data: {'audio': <int>[]});
+    final speech = await api.send('POST', '/api/speech/transcribe/', data: {'audio': <int>[]});
     expect(speech.data['text'], MockFloBrainInterceptor.cannedTranscript);
   });
 }

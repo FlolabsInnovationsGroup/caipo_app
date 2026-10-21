@@ -93,6 +93,6 @@ void main() {
     expect(speech.synthesize('hi'), throwsA(isA<SpeechUnavailable>()));
     final media = FloBrainMediaClient(api, enabled: false);
     expect(media.list(), throwsA(isA<AppException>()));
-    expect(kAuthorizationPrefix, 'Token');
+    expect(kAuthorizationPrefix, 'Bearer');
   });
 }

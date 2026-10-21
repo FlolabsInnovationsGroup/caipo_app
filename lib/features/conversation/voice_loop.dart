@@ -201,7 +201,7 @@ class VoiceLoopController extends ChangeNotifier {
       final chatId = await _chat();
       final sent = await chats.send(chatId, {'text': text});
       if (generation != _generation) return;
-      final reply = '${sent['reply'] ?? ''}'.trim();
+      final reply = ChatRepository.replyFrom(sent);
       if (reply.isEmpty) {
         throw const AppException('FloBrain returned no reply.');
       }

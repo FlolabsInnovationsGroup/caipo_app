@@ -47,3 +47,15 @@ John also asked for a latency comparison between the phone path and the Pi going
 ## 5. Contract stability
 
 When the request or response of `/process` changes, please tell the FloBrain backend team first. The app depends on FloBrain's chat response staying the same, not on this service directly.
+
+## Answers
+
+Please answer here (edit this file in a PR, or reply on the Notion task and the app team copies it in). One row per question.
+
+| # | Question | Answer | Who | Date |
+| --- | --- | --- | --- | --- |
+| 1 | Image field name and format on /process, and which vision model | | | |
+| 1 | When is image input available? | | | |
+| 2 | TTS: endpoint, voice, audio format | | | |
+| 3 | Is WAV 16 kHz mono 16-bit accepted? Can the transcript be returned on its own? | | | |
+| 4 | Typical and worst-case times: text, text + image, audio in, TTS | | | |

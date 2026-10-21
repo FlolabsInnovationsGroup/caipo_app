@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import '../../shared/copy/app_strings.dart';
 import '../../shared/feedback/haptics.dart';
 import '../../shared/theme/caipo_tokens.dart';
+import '../../device/protocol/transfer_archive.dart';
+import '../../shared/widgets/photo_question_card.dart';
 import '../../shared/widgets/voice_panel.dart';
 import 'history_store.dart';
+import 'photo_question.dart';
 import 'voice_loop.dart';
 
 class ConversationScreen extends StatefulWidget {
-  const ConversationScreen({super.key, required this.voice});
+  const ConversationScreen({super.key, required this.voice, this.photo, this.archive});
 
   final VoiceLoopController voice;
+  final PhotoQuestionController? photo;
+  final TransferArchive? archive;
 
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
@@ -28,12 +33,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
   void initState() {
     super.initState();
     widget.voice.addListener(_reload);
+    widget.photo?.addListener(_reload);
     _reload();
   }
 
   @override
   void dispose() {
     widget.voice.removeListener(_reload);
+    widget.photo?.removeListener(_reload);
     _search.dispose();
     super.dispose();
   }
@@ -70,6 +77,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
         const SizedBox(height: CaipoSpace.s),
         VoicePanel(voice: widget.voice),
         const SizedBox(height: CaipoSpace.m),
+        if (widget.photo != null && widget.archive != null) ...[
+          PhotoQuestionCard(photo: widget.photo!, archive: widget.archive!),
+          const SizedBox(height: CaipoSpace.m),
+        ],
         TextField(
           controller: _search,
           decoration: const InputDecoration(labelText: AppStrings.searchConversation),

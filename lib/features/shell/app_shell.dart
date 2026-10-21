@@ -9,7 +9,9 @@ import '../../flobrain/settings_repository.dart';
 import '../../shared/copy/app_strings.dart';
 import '../../shared/feedback/haptics.dart';
 import '../auth/session_controller.dart';
+import '../../device/protocol/transfer_archive.dart';
 import '../conversation/conversation_screen.dart';
+import '../conversation/photo_question.dart';
 import '../conversation/voice_loop.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../diagnostics/diagnostics_screen.dart';
@@ -35,6 +37,8 @@ class AppShell extends StatefulWidget {
     required this.wifiSender,
     required this.privacy,
     required this.biometrics,
+    this.photo,
+    this.archive,
   });
 
   final SessionController session;
@@ -48,6 +52,8 @@ class AppShell extends StatefulWidget {
   final WifiSender wifiSender;
   final PrivacyActions privacy;
   final BiometricGate biometrics;
+  final PhotoQuestionController? photo;
+  final TransferArchive? archive;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -111,7 +117,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final pages = [
       DashboardScreen(pairing: widget.pairing, voice: widget.voice, paths: widget.paths),
-      ConversationScreen(voice: widget.voice),
+      ConversationScreen(voice: widget.voice, photo: widget.photo, archive: widget.archive),
       MediaLibraryScreen(paths: widget.paths, voice: widget.voice),
       SettingsScreen(
         session: widget.session,

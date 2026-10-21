@@ -14,6 +14,17 @@ abstract final class AppStrings {
   static const cancel = 'Cancel';
   static const endSession = 'End session';
   static const talkToAi = 'Talk to AI';
+  static const askAboutPhoto = 'Ask about a photo';
+  static const askAboutPhotoHelp = 'Take or choose a photo, or use the last one CAIPO sent, then type your question.';
+  static const takePhoto = 'Take photo';
+  static const choosePhoto = 'Choose photo';
+  static const lastCaipoPhoto = 'Last CAIPO photo';
+  static const noCaipoPhoto = 'CAIPO has not sent a photo yet.';
+  static const photoUnreadable = 'This photo cannot be read. Use a JPEG or PNG photo.';
+  static const photoPickFailed = 'The photo could not be opened. Check camera and photo access in system settings.';
+  static const photoQuestion = 'Your question about the photo';
+  static const ask = 'Ask';
+  static const asking = 'Asking...';
   static const capture = 'Capture';
   static const recordVideo = 'Record video';
   static const liveView = 'Live view';

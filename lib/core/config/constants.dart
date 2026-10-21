@@ -52,6 +52,18 @@ const String kChatMessagesField = 'messages';
 const String kChatRoleField = 'role';
 const String kChatAssistantRole = 'assistant';
 
+/// Photo questions send the picture in [kChatImageField] as a data URL.
+/// FloBrain stores the field as "base64 or URL". TBD — owner: FloBrain backend.
+/// Its chat view does not pass the image to the model yet, so a live build
+/// blocks photo questions unless it passes `--dart-define=FLOBRAIN_VISION=true`.
+const bool kFloBrainReadsImages = bool.fromEnvironment('FLOBRAIN_VISION', defaultValue: false);
+
+/// TBD — owner: app team. Phone photos are resized before upload. A photo
+/// from CAIPO above [kPhotoMaxBytes] is refused rather than sent.
+const double kPhotoMaxWidth = 1024;
+const int kPhotoJpegQuality = 70;
+const int kPhotoMaxBytes = 4 * 1024 * 1024;
+
 /// Named in the schema descriptions for profile and sign-in.
 const String kEmailJsonField = 'email';
 const String kPasswordJsonField = 'password';

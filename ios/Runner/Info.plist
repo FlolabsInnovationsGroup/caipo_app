@@ -47,6 +47,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>CAIPO uses the camera when you take a photo to ask the AI about it.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CAIPO opens your photos when you choose one to ask the AI about it.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>CAIPO uses Face ID to unlock the app when biometric unlock is on.</string>
 	<key>NSLocalNetworkUsageDescription</key>

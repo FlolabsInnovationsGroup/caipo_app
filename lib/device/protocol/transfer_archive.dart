@@ -17,6 +17,27 @@ class TransferArchive {
     return _write(bytes, 'transfer', contentType);
   }
 
+  /// The newest complete transfer of [contentType], or null.
+  File? latest(int contentType) {
+    if (!directory.existsSync()) return null;
+    final files = directory
+        .listSync()
+        .whereType<File>()
+        .where((file) {
+          final name = file.uri.pathSegments.last;
+          return name.startsWith('transfer_') && name.contains('_type${contentType}_');
+        })
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    return files.isEmpty ? null : files.last;
+  }
+
+  /// The plain bytes of an archived transfer.
+  Future<Uint8List> read(File file) async {
+    final stored = Uint8List.fromList(await file.readAsBytes());
+    return cipher == null ? stored : cipher!.open(stored);
+  }
+
   /// Bytes received before the transfer was dropped. Not a playable file.
   Future<File> savePartial(Uint8List bytes) {
     return _write(bytes, 'partial', 0);

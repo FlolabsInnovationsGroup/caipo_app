@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:caipo_app/core/config/app_mode.dart';
 import 'package:caipo_app/core/config/app_paths.dart';
+import 'package:caipo_app/core/config/constants.dart';
 import 'package:caipo_app/core/config/proposed_flags.dart';
 import 'package:caipo_app/core/logging/app_logger.dart';
 import 'package:caipo_app/device/audio/opus_codec.dart';
@@ -16,6 +17,7 @@ import 'package:caipo_app/features/auth/biometric_gate.dart';
 import 'package:caipo_app/features/auth/session_controller.dart';
 import 'package:caipo_app/features/conversation/history_store.dart';
 import 'package:caipo_app/features/privacy/local_data.dart';
+import 'package:caipo_app/features/conversation/photo_question.dart';
 import 'package:caipo_app/features/conversation/voice_loop.dart';
 import 'package:caipo_app/features/notifications/notification_center.dart';
 import 'package:caipo_app/features/pairing/pairing_controller.dart';
@@ -62,6 +64,7 @@ Future<void> configureDependencies() async {
     ..registerSingleton<AppLogger>(logger)
     ..registerSingleton<SharedPreferences>(preferences)
     ..registerSingleton<AppPaths>(paths)
+    ..registerSingleton<TransferArchive>(archive)
     ..registerLazySingleton<BleBridge>(
       () => useSimulatedDevice ? SimCaipoController.open(replyDirectory: replies) : BleBridge(),
     )
@@ -115,6 +118,15 @@ Future<void> configureDependencies() async {
       if (sim is SimCaipoController) sim.onReplySaved = loop.noteReplyWav;
       return loop;
     })
+    ..registerLazySingleton<PhotoQuestionController>(
+      () => PhotoQuestionController(
+        chats: getIt<ChatRepository>(),
+        history: history,
+        logger: logger,
+        // The mock backend answers about the photo; live FloBrain does not read it yet.
+        backendReadsImages: useMockBackend || kFloBrainReadsImages,
+      ),
+    )
     ..registerLazySingleton<NotificationCenter>(() => NotificationCenter(preferences, logger: logger))
     ..registerLazySingleton<SessionController>(
       () => SessionController(

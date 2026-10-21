@@ -12,7 +12,7 @@ permissions:
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -21,5 +21,22 @@ jobs:
           cache: true
       - run: flutter --version
       - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
+      # Each analyzer finding becomes an annotation on the file and line.
+      - name: flutter analyze
+        id: analyze
+        continue-on-error: true
+        run: |
+          set +e
+          dart analyze --format=machine --fatal-infos > analyze.txt 2>&1
+          status=$?
+          awk -F'|' 'NF>=8 { level = ($1 == "ERROR") ? "error" : "warning"; msg = $8; for (i = 9; i <= NF; i++) msg = msg "|" $i; printf "::%s file=%s,line=%s,col=%s::%s %s\n", level, $4, $5, $6, $3, msg }' analyze.txt
+          exit $status
+      - name: flutter test
+        id: test
+        continue-on-error: true
+        run: flutter test --reporter github
+      - name: result
+        if: steps.analyze.outcome != 'success' || steps.test.outcome != 'success'
+        run: |
+          echo "analyze: ${{ steps.analyze.outcome }}, test: ${{ steps.test.outcome }}"
+          exit 1

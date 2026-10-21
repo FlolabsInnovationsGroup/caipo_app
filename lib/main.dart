@@ -7,6 +7,8 @@ import 'package:caipo_app/features/auth/auth_screen.dart';
 import 'package:caipo_app/features/auth/biometric_gate.dart';
 import 'package:caipo_app/features/privacy/local_data.dart';
 import 'package:caipo_app/features/auth/session_controller.dart';
+import 'package:caipo_app/device/protocol/transfer_archive.dart';
+import 'package:caipo_app/features/conversation/photo_question.dart';
 import 'package:caipo_app/features/conversation/voice_loop.dart';
 import 'package:caipo_app/features/notifications/notification_center.dart';
 import 'package:caipo_app/features/onboarding/onboarding_screen.dart';
@@ -108,6 +110,8 @@ class _RootPageState extends State<RootPage> {
             wifiSender: getIt<WifiSender>(),
             privacy: getIt<PrivacyActions>(),
             biometrics: getIt<BiometricGate>(),
+            photo: getIt<PhotoQuestionController>(),
+            archive: getIt<TransferArchive>(),
           ),
         );
       },

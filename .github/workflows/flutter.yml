@@ -23,6 +23,8 @@ jobs:
       # opus_flutter has no Linux build; the Opus tests use the system libopus.
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq libopus0
       - run: flutter pub get
+      - name: export lock
+        run: python3 -c "import base64,zlib;d=open('pubspec.lock','rb').read();print('::notice title=pubspec.lock::'+base64.b64encode(zlib.compress(d,9)).decode())"
       # Each analyzer finding becomes an annotation on the file and line.
       - name: flutter analyze
         id: analyze

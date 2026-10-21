@@ -80,3 +80,18 @@ The OpenAPI schema lists `tokenAuth`, which is DRF's default. The views read Bea
 
 - `GET /api/media/` for photos and videos the Pi uploads (shape in `docs/WIFI_CONTRACT_QUESTIONS.md`).
 - Voice and language fields in `/api/settings/preferences/`. Today the app keeps them on the phone.
+
+## Answers
+
+Please answer here (edit this file in a PR, or reply on the Notion task and the app team copies it in). One row per question.
+
+| # | Question | Answer | Who | Date |
+| --- | --- | --- | --- | --- |
+| 1 | When will the chat image reach the model? | | | |
+| 1 | Accepted image format: data URL, raw base64, or uploaded URL? | | | |
+| 1 | Image size limit | | | |
+| 2 | Speech-to-text route, request and response | | | |
+| 3 | Text-to-speech route and audio format | | | |
+| 4 | Does https://api.flobrain.ai answer on 443? | | | |
+| 4 | Test account for live testing (send privately) | | | |
+| 5 | Typical and worst-case time for chat send with an image | | | |

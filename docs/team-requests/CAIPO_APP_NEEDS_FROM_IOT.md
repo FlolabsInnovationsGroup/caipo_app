@@ -28,6 +28,8 @@ What the app expects, already confirmed by Antoine:
 
 Done when: the app scans, bonds, reads codec 21, receives heartbeats, and completes one R03 transfer each way with a real board.
 
+The app for this test is ready: `caipo-ble-live.apk` on the repo's `android-latest` release (rebuilt on every push to main). Install it on an Android 10+ phone. `caipo-sim-mock.apk` on the same release shows the whole flow without a board.
+
 Ask: who owns this test, and when can Mohamed get a board plus Sosina's handover document?
 
 ## 2. R03 transfers (confirmed, please keep as is)
@@ -68,3 +70,20 @@ The app team cannot read `CAIPO-Firmware`, `CAIPO-Mobile` or `caipo-devkit`. Rea
 ## Contact on the app side
 
 Code: `FlolabsInnovationsGroup/caipo_app`. Status: `docs/STATUS.md`. Decisions from the 20 and 21 Oct meetings: `docs/IOT_SYNC_2026-10-21.md`.
+
+## Answers
+
+Please answer here (edit this file in a PR, or reply on the Notion task and the app team copies it in). One row per question.
+
+| # | Question | Answer | Who | Date |
+| --- | --- | --- | --- | --- |
+| 1 | Who runs the first BLE test with the app, and when? | | | |
+| 1 | When do Mohamed get a board and Sosina's handover document? | | | |
+| 2 | Does the camera send JPEG or PNG, at what size, over R03 type 0x02? | | | |
+| 3 | Gesture events: opcode and id for single, double, long press, and what each does | | | |
+| 3 | LED: does the app send LED commands, or only show device state? | | | |
+| 3 | Confirm, change or replace COMMANDS_PROPOSAL.md (0x20 to 0x2F) | | | |
+| 4 | How is charging state reported? | | | |
+| 5 | Photo path: CAIPO to app to FloBrain, or Pi straight to FloBrain? Latency of each | | | |
+| 5 | Answers to WIFI_CONTRACT_QUESTIONS.md (live view) | | | |
+| 6 | Read access to CAIPO-Firmware, CAIPO-Mobile, caipo-devkit | | | |

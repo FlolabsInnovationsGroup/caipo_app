@@ -1,6 +1,6 @@
 # CAIPO status
 
-Current state of the whole app on 22 Oct 2026. Version `1.0.0 (1)`. A plain-language tour is in `learn.md`. The plan is `docs/CAIPO_BUILD_PLAN.md`. Decisions from the IoT meetings of 20 and 21 Oct are in `docs/IOT_SYNC_2026-10-21.md`.
+Current state of the whole app on 22 Oct 2026. Version `1.0.0 (1)`. A plain-language tour is in `learn.md`. The plan is `docs/CAIPO_BUILD_PLAN.md`. Decisions from the IoT meetings of 20 and 21 Oct are in `docs/IOT_SYNC_2026-10-21.md`. What the app needs from the IoT, FloBrain backend and multimodal teams is in `docs/team-requests/`.
 
 The app is the phone companion. It pairs with CAIPO over Bluetooth, runs the voice loop, and stores the conversation and media on the phone. It is not the wearable, and it is not the FloBrain server.
 

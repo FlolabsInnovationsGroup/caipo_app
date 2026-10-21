@@ -77,6 +77,16 @@ void main() {
     expect(ChatRepository.replyFrom({'messages': []}), isEmpty);
   });
 
+  test('a cancelled chat send stops with RequestCancelled, not a network error', () async {
+    final store = MemoryTokenStore();
+    await store.write(const TokenPair(accessToken: 'a1', refreshToken: 'r1'));
+    final adapter = _Recorder({'/api/brain/chats/1/send/': (200, '{"id":1,"messages":[]}')});
+    final chats = ChatRepository(_api(store, adapter));
+    final token = CancelToken()..cancel();
+
+    await expectLater(chats.send('1', {'text': 'hi'}, cancelToken: token), throwsA(isA<RequestCancelled>()));
+  });
+
   test('the mock backend answers with the same shapes', () async {
     final api = FloBrainApi(tokenStore: MemoryTokenStore(), logger: const AppLogger(), mockBackend: true);
     final auth = AuthRepository(api);

@@ -47,12 +47,14 @@ class FloBrainApi {
     Object? data,
     bool authenticated = true,
     Map<String, dynamic>? query,
+    CancelToken? cancelToken,
   }) {
     return _withRetry(() {
       return dio.request<dynamic>(
         path,
         data: data,
         queryParameters: query,
+        cancelToken: cancelToken,
         options: Options(
           method: method,
           extra: {'authenticated': authenticated},
@@ -86,6 +88,9 @@ class FloBrainApi {
         }
         return response;
       } on DioException catch (error) {
+        if (error.type == DioExceptionType.cancel) {
+          throw const RequestCancelled();
+        }
         lastError = NetworkException(
           'The request to FloBrain timed out or failed.',
           details: error.message,

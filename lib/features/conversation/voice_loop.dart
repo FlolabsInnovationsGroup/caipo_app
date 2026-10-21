@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/widgets.dart';
 
 import '../../core/config/constants.dart';
@@ -65,6 +66,7 @@ class VoiceLoopController extends ChangeNotifier {
   var _nextTransfer = 2;
   Timer? _idle;
   TransferCancellation? _cancellation;
+  CancelToken? _request;
 
   bool get sessionOpen => _chatId != null;
 
@@ -160,6 +162,8 @@ class VoiceLoopController extends ChangeNotifier {
     _generation++;
     _cancellation?.cancel();
     _cancellation = null;
+    _request?.cancel();
+    _request = null;
     if (phase == VoicePhase.processing || phase == VoicePhase.sending || phase == VoicePhase.listening) {
       phase = VoicePhase.idle;
       notifyListeners();
@@ -170,6 +174,8 @@ class VoiceLoopController extends ChangeNotifier {
     _generation++;
     _cancellation?.cancel();
     _cancellation = null;
+    _request?.cancel();
+    _request = null;
     _idle?.cancel();
     _chatId = null;
     transcript = null;
@@ -202,7 +208,9 @@ class VoiceLoopController extends ChangeNotifier {
       if (generation != _generation) return;
       transcript = text;
       final chatId = await _chat();
-      final sent = await chats.send(chatId, {'text': text});
+      final request = CancelToken();
+      _request = request;
+      final sent = await chats.send(chatId, {kChatTextField: text}, cancelToken: request);
       if (generation != _generation) return;
       final reply = ChatRepository.replyFrom(sent);
       if (reply.isEmpty) {

@@ -1,6 +1,6 @@
 # CAIPO status
 
-Current state of the whole app on 16 Oct 2026. Version `1.0.0 (1)`. A plain-language tour is in `learn.md`. The plan is `docs/CAIPO_BUILD_PLAN.md`.
+Current state of the whole app on 22 Oct 2026. Version `1.0.0 (1)`. A plain-language tour is in `learn.md`. The plan is `docs/CAIPO_BUILD_PLAN.md`. Decisions from the IoT meetings of 20 and 21 Oct are in `docs/IOT_SYNC_2026-10-21.md`.
 
 The app is the phone companion. It pairs with CAIPO over Bluetooth, runs the voice loop, and stores the conversation and media on the phone. It is not the wearable, and it is not the FloBrain server.
 
@@ -12,9 +12,9 @@ flutter run --dart-define=DEVICE_MODE=sim --dart-define=BACKEND_MODE=mock
 
 With no flags, the default is `DEVICE_MODE=ble` and `BACKEND_MODE=live`. `sim` is the in-app device CAIPO-SIM. `ble` is the real radio. `mock` never opens a socket. `live` calls `https://api.flobrain.ai`.
 
-`PROPOSED_SPEECH`, `PROPOSED_MEDIA`, `PROPOSED_COMMANDS`, `PROPOSED_WIFI`, and `PROPOSED_STREAM` are off. Off means the route is not called and the opcode is not written.
+`PROPOSED_SPEECH`, `PROPOSED_MEDIA`, `PROPOSED_COMMANDS`, `PROPOSED_WIFI`, and `PROPOSED_STREAM` are off. Off means the route is not called and the opcode is not written. `FLOBRAIN_VISION` is off too: see Photo questions below.
 
-Last app verification on this tree, before the later documentation commits: `flutter test` 58 passed, `flutter analyze` clean.
+Verification: GitHub Actions (`.github/workflows/flutter.yml`) runs `flutter analyze` with infos fatal and `flutter test` on every push to `main` and `claude/**`. Findings show up as annotations on the commit.
 
 ## Where the product stands
 
@@ -23,13 +23,14 @@ Last app verification on this tree, before the later documentation commits: `flu
 | Pairing and R03 | DONE in code, exercised on CAIPO-SIM | Scan, bond, GATT, transfers both ways. Not exercised on an ESP32. |
 | Voice loop | DONE on sim + mock | Opus decode, canned speech-to-text, FloBrain chat, mock speech synthesis, Opus encode, reply played on the phone speaker. |
 | Live speech | Hard failure | `Speech to text is not available.` and `Text to speech is not available.` No empty transcript and no empty audio. |
-| FloBrain live client | PARTIAL | HTTPS client, `Token` prefix, refresh on 401, health with no token. Sign-in token JSON is still fail-closed. |
+| FloBrain live client | DONE in code, not run against the live host | HTTPS client, `Bearer` prefix, sign-in and refresh shapes taken from FloBrain's backend code, refresh on 401 keeps the refresh token, reply read from `messages`. |
+| Photo questions | DONE on mock, blocked on live | Photo from the phone or the last one CAIPO sent, plus a typed question. Live FloBrain does not pass the image to the model yet. |
 | Screens | DONE | Onboarding, pairing, Dashboard, Conversation, Library, Settings, Notifications, Diagnostics, About. |
 | Library video and photos | PARTIAL | Audio clips play. Photos and video stay empty unless a transfer of that type exists. No video player and no picture-in-picture. |
 | Encryption and privacy | DONE | History and media keys in the platform store. Export and delete-all-local-data work. Biometric unlock is optional and off. |
 | Camera, LED, gestures, OTA | Disabled | The buttons say why. Default copy is `Needs device support`. No confirmed command opcodes were added. |
 | Wi-Fi, live view, device commands | PROPOSED, flags off | Code and docs exist. The default build does not send them. |
-| Advanced AI | NOT AVAILABLE | Image, video, system prompt, and offline AI are not in the FloBrain schema. Settings says so. |
+| Advanced AI | NOT AVAILABLE | Chat send accepts an `image` field, but the model only sees text. Video, system prompt, and offline AI are not in the FloBrain schema. Settings says so. |
 | Field test on hardware | NOT DONE | Checklist is `docs/FIELD_TEST.md`. It has not been run on a device. |
 
 ## What the user can do
@@ -39,7 +40,7 @@ After sign-in and a three-page intro, the bottom bar is Dashboard, Conversation,
 | Screen | Behavior |
 | --- | --- |
 | Dashboard | Connection, battery, LED color, last saved file, Talk to AI. Capture, LED, gestures, and firmware update respond with the reason they cannot run. |
-| Conversation | Encrypted history, search, delete one, delete all, voice controls. Replay plays the reply WAV on the phone speaker in sim mode. |
+| Conversation | Encrypted history, search, delete one, delete all, voice controls, Ask about a photo. Replay plays the reply WAV on the phone speaker in sim mode. |
 | Library | Waveform and speeds 0.5x–2x, share, delete. Reply text sits next to the clip. FloBrain does not return word times, so captions are not synced to playback. |
 | Settings | Device info when GATT returned it, rename, voice and language kept on the phone, auto-connect, biometric unlock, up to 5 Wi-Fi networks, transfer cache, export, delete local data, profile, password, sign out, delete account, About. Auto-lock is 1–30 minutes, default 15. |
 | Diagnostics | Recent logs, errors, RSSI when the scan reported it, reply-transfer timing, export, FAQ, bug report with the log attached. |
@@ -58,7 +59,7 @@ App name is `CAIPO` on Android, iOS, and the Flutter title. The icon and splash 
 4. The text reply is encoded and sent back.
 5. The history line is stored only after the reply succeeds.
 
-States shown: Listening, Processing, Sending, Done. One chat lasts until 30 seconds idle or End session. Cancel drops the in-flight request. Timeouts, 429, and 5xx retry with backoff. A failed turn is kept as `Not sent` with Retry. The recording is encrypted with the history key.
+States shown: Listening, Processing, Sending, Done. One chat lasts until 30 seconds idle or End session. Cancel aborts the in-flight HTTP request. Timeouts, 429, and 5xx retry with backoff. A failed turn is kept as `Not sent` with Retry. The recording is encrypted with the history key.
 
 On CAIPO-SIM the sample is `assets/sim/speech.wav`. The reply is decoded to WAV under app documents and played on the phone speaker. After connect the pairing line says `Connected to CAIPO-SIM.`
 
@@ -86,7 +87,26 @@ Confirmed identity, unchanged: service `a1000000-5fa6-43f5-9827-201f62bd377d`, c
 
 Authenticated calls stay on HTTPS. A read-only `GET http://api.flobrain.ai/api/schema/` on 16 Oct 2026 returned the OpenAPI document (200, `application/vnd.oai.openapi`, 11,748 bytes, no credentials).
 
-The document confirms the route list, `current_password`, `new_password`, delete body `password`, profile `fullName` and `email`, and Authorization prefix `Token`. It does not define the sign-in token JSON, so `access` and `refresh` stay fail-closed. Sign-out sends `refresh_token` only. `userId` is not sent. Health `GET /api/dashboard/health/` sends no token.
+The document confirms the route list, `current_password`, `new_password`, delete body `password`, and profile `fullName` and `email`. Its `tokenAuth` entry is DRF's default and is not what the views read.
+
+On 21 Oct 2026 the shapes below were read from FloBrain's backend code (`main`, merge `7dbedb23`), not from the schema:
+
+| Call | Request | Response |
+| --- | --- | --- |
+| Every authenticated call | `Authorization: Bearer <access>` | |
+| `POST /api/auth/signin/`, `/register/` | `email`, `password` | `access_token`, `refresh_token`, `userId` |
+| `POST /api/auth/refresh/` | `refresh` | `access` only. The app keeps its refresh token. |
+| `POST /api/auth/signout/` | `refresh_token`, with the Bearer header | `message` |
+| `POST /api/brain/chats/` | `title` | The chat: `id`, `title`, `timestamp`, `messages`, `usage` |
+| `POST /api/brain/chats/{id}/send/` | `text`, optional `image`, optional `model` | The whole chat. The reply is the last `assistant` message. There is no `reply` field. |
+
+Sign-in still fails closed when either token is missing. Health `GET /api/dashboard/health/` sends no token.
+
+## Photo questions
+
+The V1 agreed on 20 Oct is a still picture and a question, answered by FloBrain, not a live stream. Conversation has Ask about a photo: Take photo, Choose photo, or Last CAIPO photo (the newest image transfer, content type `0x02`), then a typed question. Phone photos are resized to 1024 px wide at JPEG quality 70. A CAIPO photo above 4 MB, or one that is not JPEG or PNG, is refused. The photo goes in `image` as `data:image/jpeg;base64,...`.
+
+FloBrain's chat view stores the image but builds the model prompt from text only (`brain/views.py`, `_build_llm_messages`). A live build therefore blocks photo questions and says why. `--dart-define=FLOBRAIN_VISION=true` turns them on once the backend passes the image to the model. The mock backend answers about the photo, so the flow can be shown on sim + mock. The answer is shown as text. Speaking it on CAIPO waits on text to speech.
 
 `/api/settings/preferences/` has no voice or language fields. Those settings stay on the phone.
 
@@ -96,11 +116,15 @@ The mock backend is inside the app at `http://mock.flobrain.local`. `tools/flobr
 
 AES-256-GCM. History key `caipo.history.aes.key` and media key `caipo.media.aes.key` are in the Keychain / Android Keystore. A history key left in preferences is moved once and then removed.
 
+Plain audio copies made for playback go to the temporary folder `caipo-play`. They are deleted when the clip closes, when playback ends, at start-up, and by Delete all. Older builds left `*.play.wav` and `*.bin.wav` next to the encrypted file; deleting a clip removes those too.
+
 A finished transfer is sealed in the BLE callback before it is written, including while the screen is locked or the process is backgrounded. The same cipher seals a dropped transfer's partial file. Reply WAVs are sealed after the simulator writes them. Native BLE code does not write transfer files.
 
-Export shares conversation JSON only. It does not include Wi-Fi passwords or keys. Delete all local data clears history, media, saved Wi-Fi, and the on-device keys, then signs out. It does not call FloBrain. Delete account is the separate remote call and asks for the password.
+Export shares conversation JSON only. It does not include Wi-Fi passwords or keys. Delete all local data clears history, media, playback copies, saved Wi-Fi, saved settings and paired devices, and the on-device keys, then signs out. It does not call FloBrain. Delete account is the separate remote call and asks for the password.
 
-Biometric unlock is off until Settings turns it on. Password sign-in stays available. Auto-lock default is 15 minutes.
+Biometric unlock is off until Settings turns it on. Password sign-in stays available. On Android, `MainActivity` is a `FlutterFragmentActivity`, which `local_auth` needs. Auto-lock default is 15 minutes. It is checked every 30 seconds while the app is open, and on resume.
+
+`usesCleartextTraffic` stays on in the Android manifest. The proposed camera stream is plain HTTP to a device address learned at run time, and Android's network security config cannot allow a whole local range. Every FloBrain call uses HTTPS.
 
 ## Proposed, off by default
 
@@ -133,7 +157,9 @@ On `caipo-live.apk`: the app looks for a real CAIPO and calls `https://api.flobr
 
 ## Contract questions
 
-Authorization prefix: the Notion doc says `Bearer`. The live OpenAPI schema (`tokenAuth`, fetched 16 Oct 2026) says `Token`. The app uses one constant, `kAuthorizationPrefix`, default `Token`, until the backend confirms it.
+Authorization prefix: resolved. FloBrain's views read `Bearer` (checked in code on 21 Oct 2026).
+
+Chat `image`: the model does not receive it yet. Which format FloBrain will pass on (data URL, raw base64, or an uploaded URL) is open. The app sends a data URL. Owner: FloBrain backend.
 
 `/api/settings/preferences/` defines no voice or language fields. Those settings stay on the phone.
 
@@ -149,7 +175,8 @@ Wi-Fi questions are only the gaps in `docs/WIFI_CONTRACT_QUESTIONS.md`.
 | --- | --- |
 | ESP32-S3 GATT, heartbeat, encrypted characteristics | IoT |
 | HTTPS on `api.flobrain.ai` | Backend. Port 443 was refused from this machine on 15 Oct 2026. Port 80 answered the schema GET. Authenticated calls stay on HTTPS. |
-| Live sign-in token JSON | FloBrain. `access` and `refresh` stay fail-closed. |
+| Image in FloBrain chat answers | FloBrain backend. Photo questions stay blocked on live until then. |
+| Reconnect after the 1/2/4 s attempts | App + IoT. The app gives up after three attempts as R01.4 says. A standing background reconnect needs a real ESP32 to test. |
 | Live STT and TTS | FloBrain. The app fails these calls on purpose. |
 | 3 second heartbeat silence rule | Off until firmware heartbeats exist. |
 | iOS build | Needs a Mac. The write-length call is in the Swift stack. |

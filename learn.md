@@ -99,7 +99,7 @@ These flags are all `false` in a normal build. While a flag is off, the app does
 
 Image input, a custom system prompt, and offline AI are not in the current FloBrain schema. Settings says they are not available. Voice and language stay on the phone, because the settings schema does not define those fields.
 
-The app sends the `Token` authorization prefix, because the OpenAPI schema read on 16 Oct 2026 says so. The Notion doc says `Bearer`. That conflict is recorded in `docs/STATUS.md` until the backend confirms it.
+The app sends the `Bearer` authorization prefix. FloBrain's backend code reads Bearer tokens (checked on 21 Oct 2026). The OpenAPI schema's `tokenAuth` entry is a framework default and is not what the views read. The full request and response shapes are in `docs/STATUS.md`.
 
 ## Test and live
 

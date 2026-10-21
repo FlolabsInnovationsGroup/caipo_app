@@ -4,7 +4,7 @@ These are places where the spec is ambiguous, contradictory, or impossible as wr
 
 ## Live API schema could not be fetched
 
-`https://api.flobrain.ai/api/schema/`, `/api/swagger/`, `/api/redoc/` and the auth endpoints timed out or refused the connection from this environment on 13 October 2026. An earlier fetch of `/api/schema/` returned HTTP 500. Request and response field names for tokens, email, password and change-password are therefore placeholders, not confirmed shapes. The client fails closed when those keys are absent. It does not try a second set of names.
+`https://api.flobrain.ai/api/schema/`, `/api/swagger/`, `/api/redoc/` and the auth endpoints timed out or refused the connection from this environment on 13 October 2026. An earlier fetch of `/api/schema/` returned HTTP 500. Request and response field names for tokens, email, password and change-password were therefore placeholders at the time. Update, 21 Oct 2026: the auth and chat shapes were read from FloBrain's backend code and are listed in `docs/STATUS.md`. The client still fails closed when those keys are absent. It does not try a second set of names.
 
 The documented error object `{ "error", "details" }` is what the client reads.
 
@@ -52,7 +52,7 @@ The brief also says to mock the chunker and checksum, and to unit-test them. The
 
 ## STT and TTS block the audio round trip
 
-No speech endpoint is in section 7. `SttClient` and `TtsClient` return empty results. R02.3 and R06.3 cannot be completed until FloBrain says where speech is handled.
+No speech endpoint is in section 7. Live speech fails with a clear "not available" error rather than empty results. R02.3 and R06.3 cannot be completed until FloBrain says where speech is handled.
 
 ## OMI paths in the spec have drifted
 

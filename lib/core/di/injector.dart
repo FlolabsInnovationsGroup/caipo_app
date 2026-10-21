@@ -50,7 +50,17 @@ Future<void> configureDependencies() async {
   transfers.createSync(recursive: true);
   historyDir.createSync(recursive: true);
   replies.createSync(recursive: true);
-  final paths = AppPaths(documents: documents, transfers: transfers, replies: replies, history: historyDir);
+  final playback = Directory('${(await getTemporaryDirectory()).path}${Platform.pathSeparator}caipo-play');
+  // Plain playback copies never outlive a run.
+  if (playback.existsSync()) playback.deleteSync(recursive: true);
+  playback.createSync(recursive: true);
+  final paths = AppPaths(
+    documents: documents,
+    transfers: transfers,
+    replies: replies,
+    history: historyDir,
+    playback: playback,
+  );
   final secureApi = SecureStoreHostApi();
   final secrets = SecretStore.platform(secureApi);
   final history = ConversationHistoryStore(
@@ -114,6 +124,7 @@ Future<void> configureDependencies() async {
         logger: logger,
         codec: OpusCodec.shared,
       );
+      loop.playbackDirectory = playback;
       final sim = getIt<BleBridge>().controller;
       if (sim is SimCaipoController) sim.onReplySaved = loop.noteReplyWav;
       return loop;
@@ -144,6 +155,7 @@ Future<void> configureDependencies() async {
         paths: paths,
         wifi: getIt<WifiNetworkStore>(),
         wipeStore: getIt<SecureTokenStore>().deleteAll,
+        preferences: preferences,
       ),
     )
     ..registerLazySingleton<PairingController>(

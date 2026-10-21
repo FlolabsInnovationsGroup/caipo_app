@@ -34,7 +34,12 @@ jobs:
       - name: flutter test
         id: test
         continue-on-error: true
-        run: flutter test --reporter github
+        run: |
+          set +e
+          flutter test --machine > test.json
+          status=$?
+          python3 .github/test_annotations.py test.json
+          exit $status
       - name: result
         if: steps.analyze.outcome != 'success' || steps.test.outcome != 'success'
         run: |

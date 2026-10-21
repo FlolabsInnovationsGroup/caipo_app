@@ -44,6 +44,9 @@ class VoiceLoopController extends ChangeNotifier {
   final OpusCodec codec;
   final Duration idleTimeout;
 
+  /// Where plain copies for playback go. Set at start-up to the temp folder.
+  Directory? playbackDirectory;
+
   VoicePhase phase = VoicePhase.idle;
   String? transcript;
   String? replyText;

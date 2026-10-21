@@ -7,10 +7,12 @@ import com.flolabs.caipo.SecureStoreHostApi
 import com.flolabs.caipo.ble.BleHostApiImpl
 import com.flolabs.caipo.ble.CaipoBleManager
 import com.flolabs.caipo.secure.SecureStoreHostApiImpl
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 
-class MainActivity : FlutterActivity() {
+// local_auth shows the biometric prompt from a FragmentActivity. A plain
+// FlutterActivity makes every biometric unlock fail with no_fragment_activity.
+class MainActivity : FlutterFragmentActivity() {
     private var bleHost: BleHostApiImpl? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -23,7 +25,7 @@ class MainActivity : FlutterActivity() {
         SecureStoreHostApi.setUp(messenger, SecureStoreHostApiImpl(filesDir))
     }
 
-    @Deprecated("FlutterActivity still delivers the Bluetooth enable result here.")
+    @Deprecated("The activity still delivers the Bluetooth enable result here.")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         bleHost?.onActivityResult(requestCode, resultCode)

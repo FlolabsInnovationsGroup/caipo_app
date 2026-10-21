@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -55,7 +56,7 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
         if (audio.isEmpty)
           const Text(AppStrings.audioEmpty)
         else
-          for (final file in audio) _AudioTile(file: file, voice: widget.voice, onChanged: _refresh),
+          for (final file in audio) _AudioTile(file: file, voice: widget.voice, onChanged: _refresh, playback: widget.paths.playback),
         const SizedBox(height: CaipoSpace.l),
         Text('Photos', style: Theme.of(context).textTheme.titleMedium),
         Text(FloBrainMediaClient.unavailable, style: Theme.of(context).textTheme.bodySmall),
@@ -87,17 +88,18 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
     return widget.paths.transfers
         .listSync()
         .whereType<File>()
-        .where((file) => file.path.contains('_type$type'))
+        .where((file) => file.path.contains('_type$type') && file.path.endsWith('.bin'))
         .toList();
   }
 }
 
 class _AudioTile extends StatefulWidget {
-  const _AudioTile({required this.file, required this.voice, required this.onChanged});
+  const _AudioTile({required this.file, required this.voice, required this.onChanged, this.playback});
 
   final File file;
   final VoiceLoopController voice;
   final VoidCallback onChanged;
+  final Directory? playback;
 
   @override
   State<_AudioTile> createState() => _AudioTileState();
@@ -113,9 +115,15 @@ class _AudioTileState extends State<_AudioTile> {
     _prepare();
   }
 
+  @override
+  void dispose() {
+    unawaited(deletePlaybackCopy(widget.playback, _wav));
+    super.dispose();
+  }
+
   Future<void> _prepare() async {
     try {
-      final wav = await _playableWav(widget.file, widget.voice.archive.cipher);
+      final wav = await _playableWav(widget.file, widget.voice.archive.cipher, widget.playback);
       if (!mounted) return;
       setState(() => _wav = wav);
     } catch (error) {
@@ -158,8 +166,11 @@ class _AudioTileState extends State<_AudioTile> {
   Future<void> _delete(File file) async {
     caipoHaptic();
     if (file.existsSync()) await file.delete();
-    final sidecar = File('${file.path}.wav');
-    if (sidecar.existsSync() && sidecar.path != file.path) await sidecar.delete();
+    // Older builds left a plain copy next to the file. Remove it too.
+    for (final sidecar in [File('${file.path}.wav'), File('${file.path}.play.wav')]) {
+      if (sidecar.existsSync() && sidecar.path != file.path) await sidecar.delete();
+    }
+    await deletePlaybackCopy(widget.playback, _wav);
     widget.onChanged();
   }
 }
@@ -189,21 +200,18 @@ class _FileTile extends StatelessWidget {
   }
 }
 
-Future<File> _playableWav(File source, AtRestCipher? cipher) async {
+Future<File> _playableWav(File source, AtRestCipher? cipher, Directory? playback) async {
   final stored = Uint8List.fromList(await source.readAsBytes());
   final bytes = cipher == null ? stored : await cipher.open(stored);
   if (source.path.toLowerCase().endsWith('.wav') && (cipher == null || !cipher.isSealed(stored))) {
     return source;
   }
+  final name = '${source.uri.pathSegments.last}.wav';
   if (source.path.toLowerCase().endsWith('.wav')) {
-    final out = File('${source.path}.play.wav');
-    await out.writeAsBytes(bytes, flush: true);
-    return out;
+    return writePlaybackCopy(playback, name, bytes);
   }
   final pcm = OpusCodec.shared.decodeContainer(bytes);
-  final out = File('${source.path}.wav');
-  await out.writeAsBytes(writePcmWav(pcm), flush: true);
-  return out;
+  return writePlaybackCopy(playback, name, writePcmWav(pcm));
 }
 
 Future<void> _share(File file) {

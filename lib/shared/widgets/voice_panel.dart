@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/config/app_mode.dart';
+import '../../core/config/app_paths.dart';
 import '../../features/conversation/voice_loop.dart';
 import '../../shared/copy/app_strings.dart';
 import '../../shared/feedback/haptics.dart';
@@ -20,11 +22,25 @@ class VoicePanel extends StatefulWidget {
 
 class _VoicePanelState extends State<VoicePanel> {
   final AudioPlayer _player = AudioPlayer();
+  File? _playable;
+
+  @override
+  void initState() {
+    super.initState();
+    _player.onPlayerComplete.listen((_) => _dropPlayable());
+  }
 
   @override
   void dispose() {
     _player.dispose();
+    _dropPlayable();
     super.dispose();
+  }
+
+  void _dropPlayable() {
+    final file = _playable;
+    _playable = null;
+    unawaited(deletePlaybackCopy(widget.voice.playbackDirectory, file));
   }
 
   @override
@@ -104,9 +120,10 @@ class _VoicePanelState extends State<VoicePanel> {
   Future<void> _play(String path) async {
     caipoHaptic();
     final bytes = await widget.voice.readStored(path);
-    final playable = File('$path.play.wav');
-    await playable.writeAsBytes(bytes, flush: true);
     await _player.stop();
+    _dropPlayable();
+    final playable = await writePlaybackCopy(widget.voice.playbackDirectory, 'reply.wav', bytes);
+    _playable = playable;
     await _player.play(DeviceFileSource(playable.path));
   }
 }

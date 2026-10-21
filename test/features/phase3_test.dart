@@ -91,9 +91,12 @@ void main() {
       transfers: Directory('${root.path}${Platform.pathSeparator}transfers')..createSync(),
       replies: Directory('${root.path}${Platform.pathSeparator}replies')..createSync(),
       history: Directory('${root.path}${Platform.pathSeparator}history')..createSync(),
+      playback: Directory('${root.path}${Platform.pathSeparator}playback')..createSync(),
     );
     final history = ConversationHistoryStore(directory: paths.history, secrets: secrets);
     await history.append(role: 'user', text: 'private');
+    await writePlaybackCopy(paths.playback, 'reply.wav', Uint8List.fromList([7]));
+    await prefs.setBool('caipo.onboarded', true);
     await AtRestCipher(secrets: secrets, keyName: AtRestCipher.mediaKeyName).seal(Uint8List.fromList([1, 2, 3]));
     await File('${paths.transfers.path}${Platform.pathSeparator}clip.bin').writeAsBytes([4, 5]);
     await File('${paths.replies.path}${Platform.pathSeparator}reply.wav').writeAsBytes([6]);
@@ -120,12 +123,15 @@ void main() {
       paths: paths,
       wifi: wifi,
       wipeStore: tokens.clear,
+      preferences: prefs,
     );
     await privacy.deleteAll();
     await session.signOut();
     expect(await history.load(), isEmpty);
     expect(paths.transfers.listSync(), isEmpty);
     expect(paths.replies.listSync(), isEmpty);
+    expect(paths.playback!.listSync(), isEmpty);
+    expect(prefs.getKeys(), isEmpty);
     expect(await secrets.read(AtRestCipher.historyKeyName), isNull);
     expect(await secrets.read(AtRestCipher.mediaKeyName), isNull);
     expect(await wifi.load(), isEmpty);

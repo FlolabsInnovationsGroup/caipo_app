@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:caipo_app/core/errors/app_exception.dart';
 import 'package:caipo_app/core/logging/app_logger.dart';
 import 'package:caipo_app/flobrain/api_client.dart';
 import 'package:caipo_app/flobrain/auth_repository.dart';
